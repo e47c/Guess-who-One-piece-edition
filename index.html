@@ -2298,11 +2298,14 @@ async function changeTurn() {
 window.toggleGuess =
 function() {
 
+    /*
+        Guessing is only allowed during
+        your own turn.
+    */
+
     if (
-        !currentRoomData
-        ||
-        currentRoomData.turn
-        !== myPlayer
+        !currentRoomData ||
+        currentRoomData.turn !== myPlayer
     ) {
 
         return;
@@ -2321,9 +2324,21 @@ function() {
             );
 
 
-    if (
-        guessMode
-    ) {
+    const guessButton =
+        document
+            .getElementById(
+                "guessButton"
+            );
+
+
+    const status =
+        document
+            .getElementById(
+                "gameStatus"
+            );
+
+
+    if (guessMode) {
 
         boardElement
             .classList
@@ -2332,20 +2347,14 @@ function() {
             );
 
 
-        document
-            .getElementById(
-                "guessButton"
-            )
+        guessButton
             .textContent =
             "✖ CANCEL GUESS";
 
 
-        document
-            .getElementById(
-                "gameStatus"
-            )
+        status
             .textContent =
-            "Click the character you think they chose.";
+            "Click the character you think your opponent chose.";
 
     }
 
@@ -2358,12 +2367,14 @@ function() {
             );
 
 
-        document
-            .getElementById(
-                "guessButton"
-            )
+        guessButton
             .textContent =
             "🎯 GUESS";
+
+
+        status
+            .textContent =
+            "Your turn — ask your question.";
 
     }
 
