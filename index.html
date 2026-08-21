@@ -1510,6 +1510,125 @@ function listenToRoom() {
         }
     );
 
+          /*
+        Listen for guesses.
+
+        When the opponent makes a guess,
+        this player's browser checks its
+        own secret character.
+    */
+
+    const guessRef =
+        ref(
+            db,
+            "rooms/" +
+            room +
+            "/guess"
+        );
+
+
+    onValue(
+        guessRef,
+        async snapshot => {
+
+            if (!snapshot.exists()) {
+                return;
+            }
+
+
+            const guess =
+                snapshot.val();
+
+
+            /*
+                Ignore our own guesses.
+            */
+
+            if (
+                guess.player === myPlayer
+            ) {
+                return;
+            }
+
+
+            /*
+                Get OUR private secret.
+            */
+
+            const secretRef =
+                ref(
+                    db,
+                    "rooms/" +
+                    room +
+                    "/private/" +
+                    user.uid +
+                    "/secret"
+                );
+
+
+            const secretSnapshot =
+                await get(secretRef);
+
+
+            if (
+                !secretSnapshot.exists()
+            ) {
+                return;
+            }
+
+
+            const mySecret =
+                secretSnapshot.val();
+
+
+            const correct =
+                mySecret.id ===
+                guess.characterId;
+
+
+            /*
+                The player who made the guess
+                wins if correct.
+
+                Otherwise WE win.
+            */
+
+            const winner =
+                correct
+                    ? guess.player
+                    : myPlayer;
+
+
+            await update(
+                ref(
+                    db,
+                    "rooms/" + room
+                ),
+                {
+
+                    status:
+                        "finished",
+
+                    winner:
+                        winner,
+
+                    result:
+                        correct
+                            ? "correct"
+                            : "wrong",
+
+                    guessedCharacter:
+                        guess.characterId,
+
+                    finishedAt:
+                        Date.now()
+
+                }
+            );
+
+        }
+    );
+
 }
 
 
