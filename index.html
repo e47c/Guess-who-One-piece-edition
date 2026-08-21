@@ -1456,21 +1456,23 @@ function listenToRoom() {
         if (!currentRoomData || currentRoomData.status !== "playing") return;
 
         try {
-            const opponent = Number(myPlayer) === 1
-                ? currentRoomData.player2
-                : currentRoomData.player1;
+            const opponent =
+                Number(myPlayer) === 1
+                    ? currentRoomData.player2
+                    : currentRoomData.player1;
 
             if (!opponent || !opponent.secretId) {
-                throw new Error("The opponent's character is not ready yet.");
+                throw new Error("The opponent's secret character is not ready.");
             }
 
             const correct =
                 String(opponent.secretId) === String(guess.characterId);
 
             const winner =
-                correct ? Number(guess.player) : Number(myPlayer);
+                correct
+                    ? Number(guess.player)
+                    : Number(myPlayer);
 
-            // End the game for BOTH players with one room update.
             await update(ref(db, "rooms/" + room), {
                 status: "finished",
                 winner: winner,
@@ -1610,7 +1612,8 @@ async function() {
 
     guessMode = false;
     lastGameTurn = null;
-        gameScreenWasShown = false;
+    resultShown = false;
+    gameScreenWasShown = false;
     renderedBoardSignature = "";
 
 };
@@ -1779,12 +1782,15 @@ async function() {
             : "player2/ready";
 
 
-    await update(
-        ref(db, "rooms/" + room),
-        {
-            [playerPath]: true,
-            [myPlayer === 1 ? "player1/secretId" : "player2/secretId"]: secret.id
-        }
+    await set(
+        ref(
+            db,
+            "rooms/"
+            + room
+            + "/"
+            + playerPath
+        ),
+        true
     );
 
 
@@ -1930,6 +1936,7 @@ let resultShown = false;
 
 async function beginPlaying() {
     if (!currentRoomData || myPlayer !== 1 || currentRoomData.status === "playing") return;
+    resultShown = false;
     await update(ref(db, "rooms/" + room), { status: "playing", turn: 1, guess: null });
 }
 
@@ -2140,9 +2147,12 @@ async function finishGame(winner, correct) {
    RESULTS
 ========================================= */
 
-let resultRevealedListenerStarted = false;
-
 async function showResultScreen(data) {
+    // Prevent the result screen's own Firebase reveal write from
+    // recursively re-entering this function through the room listener.
+    if (resultShown) return;
+    resultShown = true;
+
     guessMode = false;
     gameScreenWasShown = false;
     renderedBoardSignature = "";
@@ -2180,22 +2190,17 @@ async function showResultScreen(data) {
     // Read whatever has been revealed so far. Firebase will notify both
     // browsers again when the other player reveals theirs.
     const revealedRef = ref(db, "rooms/" + room + "/revealed");
+    onValue(revealedRef, snapshot => {
+        const revealed = snapshot.val() || {};
 
-    if (!resultRevealedListenerStarted) {
-        resultRevealedListenerStarted = true;
+        if (revealed.player1) {
+            document.getElementById("resultImage1").src = revealed.player1.image;
+        }
 
-        onValue(revealedRef, snapshot => {
-            const revealed = snapshot.val() || {};
-
-            if (revealed.player1) {
-                document.getElementById("resultImage1").src = revealed.player1.image;
-            }
-
-            if (revealed.player2) {
-                document.getElementById("resultImage2").src = revealed.player2.image;
-            }
-        });
-    }
+        if (revealed.player2) {
+            document.getElementById("resultImage2").src = revealed.player2.image;
+        }
+    }, { onlyOnce: false });
 
     document.getElementById("statName1").textContent = data.player1.name;
     document.getElementById("statName2").textContent = data.player2.name;
@@ -2237,6 +2242,15 @@ async function() {
                 null,
 
             result:
+                null,
+
+            winner:
+                null,
+
+            guessedCharacter:
+                null,
+
+            finishedAt:
                 null,
 
             "player1/ready":
