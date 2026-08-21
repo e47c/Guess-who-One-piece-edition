@@ -2229,9 +2229,7 @@ function renderBoard() {
    HEADER
 ========================================= */
 
-function updateGameHeader(
-    data
-) {
+function updateGameHeader(data) {
 
     const turnPlayer =
         data.turn;
@@ -2244,12 +2242,15 @@ function updateGameHeader(
 
 
     document
-        .getElementById(
-            "turnText"
-        )
+        .getElementById("turnText")
         .textContent =
-        name
-        + "'s Turn";
+        name + "'s Turn";
+
+
+    const guessButton =
+        document.getElementById(
+            "guessButton"
+        );
 
 
     if (
@@ -2257,17 +2258,12 @@ function updateGameHeader(
     ) {
 
         document
-            .getElementById(
-                "gameStatus"
-            )
+            .getElementById("gameStatus")
             .textContent =
             "Your turn — ask your question.";
 
-        document
-            .getElementById(
-                "guessButton"
-            )
-            .disabled =
+
+        guessButton.disabled =
             false;
 
     }
@@ -2275,18 +2271,32 @@ function updateGameHeader(
     else {
 
         document
-            .getElementById(
-                "gameStatus"
-            )
+            .getElementById("gameStatus")
             .textContent =
             "Opponent's turn.";
 
-        document
-            .getElementById(
-                "guessButton"
-            )
-            .disabled =
+
+        guessButton.disabled =
             true;
+
+
+        /*
+            If the opponent's turn starts,
+            automatically cancel our guess mode.
+        */
+
+        guessMode =
+            false;
+
+
+        document
+            .getElementById("board")
+            .classList
+            .remove("guess-mode");
+
+
+        guessButton.textContent =
+            "🎯 GUESS";
 
     }
 
