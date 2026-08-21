@@ -904,6 +904,10 @@ let selectedSecret = null;
 
 let guessMode = false;
 
+// True while we're waiting on the opponent's browser to verify a guess
+// we just submitted.
+let awaitingGuess = false;
+
 
 let currentRoomData = null;
 
@@ -2011,6 +2015,16 @@ function updateGameHeader(data) {
     const endButton = document.getElementById("endTurnButton");
     const status = document.getElementById("gameStatus");
     const mine = turnPlayer === Number(myPlayer);
+
+    // A guess we submitted writes to a child node under the room, which
+    // re-fires this function before the opponent has verified anything.
+    // Don't let that reset the UI back to a normal turn state — wait for
+    // the room to actually move to "finished", or for the turn to
+    // genuinely change (which only happens via End Turn).
+    if (awaitingGuess) {
+        return;
+    }
+
     guessButton.disabled = !mine;
     endButton.disabled = !mine;
     if (!mine) {
@@ -2099,6 +2113,7 @@ async function makeGuess(index) {
     if (!character) return;
 
     guessMode = false;
+    awaitingGuess = true;
     document.getElementById("board").classList.remove("guess-mode");
     document.getElementById("guessButton").disabled = true;
     document.getElementById("endTurnButton").disabled = true;
@@ -2123,6 +2138,7 @@ async function makeGuess(index) {
 
     } catch (e) {
         console.error("Guess submission failed:", e);
+        awaitingGuess = false;
 
         document.getElementById("gameStatus").textContent =
             "Could not submit guess: " + (e.message || "Firebase error");
@@ -2155,6 +2171,7 @@ async function showResultScreen(data) {
     resultShown = true;
 
     guessMode = false;
+    awaitingGuess = false;
     gameScreenWasShown = false;
     renderedBoardSignature = "";
     
