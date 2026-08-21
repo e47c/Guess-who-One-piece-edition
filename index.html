@@ -904,6 +904,10 @@ let selectedSecret = null;
 
 let guessMode = false;
 
+// Eliminated cards are local to each player and must survive Firebase
+// room updates/re-renders during the same match.
+let eliminatedCards = new Set();
+
 
 let currentRoomData = null;
 
@@ -1411,7 +1415,6 @@ function listenToRoom() {
 
         currentRoomData = snapshot.val();
 
-        // Keep the local board size synchronized with the room.
         if (currentRoomData.boardSize) {
             boardSize = Number(currentRoomData.boardSize);
         }
@@ -1435,8 +1438,8 @@ function listenToRoom() {
         }
     });
 
-    // Guess listener: the opponent validates the guess using their own secret.
-    // The validation is deliberately done by the player whose secret is being guessed.
+    // The opponent validates a guess using their own private secret.
+    // Only the opponent's browser can perform this comparison.
     const guessRef = ref(db, "rooms/" + room + "/guess");
     let lastProcessedGuess = null;
 
@@ -1449,10 +1452,7 @@ function listenToRoom() {
         if (!key || key === lastProcessedGuess) return;
         lastProcessedGuess = key;
 
-        // The player who made the guess does not know the opponent's secret.
-        // Only the opponent validates it.
         if (Number(guess.player) === Number(myPlayer)) return;
-
         if (!currentRoomData || currentRoomData.status !== "playing") return;
 
         try {
@@ -1465,29 +1465,20 @@ function listenToRoom() {
             }
 
             const secret = secretSnap.val();
-            const correct =
-                String(secret.id) === String(guess.characterId);
+            const correct = String(secret.id) === String(guess.characterId);
+            const winner = correct ? Number(guess.player) : Number(myPlayer);
 
-            const winner = correct
-                ? Number(guess.player)
-                : Number(myPlayer);
-
-            // This single update ends the game for BOTH players.
-            await update(
-                ref(db, "rooms/" + room),
-                {
-                    status: "finished",
-                    winner: winner,
-                    result: correct ? "correct" : "wrong",
-                    guessedCharacter: guess.characterId,
-                    finishedAt: Date.now(),
-                    guess: null
-                }
-            );
+            await update(ref(db, "rooms/" + room), {
+                status: "finished",
+                winner: winner,
+                result: correct ? "correct" : "wrong",
+                guessedCharacter: guess.characterId,
+                finishedAt: Date.now(),
+                guess: null
+            });
 
         } catch (e) {
             console.error("Guess validation failed:", e);
-
             document.getElementById("gameStatus").textContent =
                 "Guess failed: " + (e.message || "Firebase error");
         }
@@ -1948,8 +1939,13 @@ function showGameScreen(data) {
     const gameElement = document.getElementById("game");
     const wasVisible = !gameElement.classList.contains("hidden");
     showOnly("game");
+
     const newBoard = Array.isArray(data.board) ? data.board : [];
     const signature = newBoard.map(c => c.id).join("|");
+
+    // Do not rebuild the board merely because Firebase's "guess" or "turn"
+    // value changed. Re-render only when the actual board changes or the
+    // game screen is being opened for the first time.
     if (!wasVisible || !gameScreenWasShown || signature !== renderedBoardSignature) {
         board = newBoard;
         renderBoard();
@@ -1957,6 +1953,7 @@ function showGameScreen(data) {
     } else {
         board = newBoard;
     }
+
     gameScreenWasShown = true;
     updateGameHeader(data);
 }
@@ -1975,6 +1972,11 @@ function renderBoard() {
         card.className = "card";
         card.dataset.index = index;
 
+        // Restore this player's local eliminations after a Firebase re-render.
+        if (eliminatedCards.has(String(character.id))) {
+            card.classList.add("eliminated");
+        }
+
         const img = document.createElement("img");
         img.src = character.image;
         img.alt = "";
@@ -1992,7 +1994,15 @@ function renderBoard() {
                 return;
             }
 
-            card.classList.toggle("eliminated");
+            const id = String(character.id);
+
+            if (eliminatedCards.has(id)) {
+                eliminatedCards.delete(id);
+                card.classList.remove("eliminated");
+            } else {
+                eliminatedCards.add(id);
+                card.classList.add("eliminated");
+            }
         };
 
         element.appendChild(card);
@@ -2039,25 +2049,18 @@ window.endTurn = async function() {
     document.getElementById("gameStatus").textContent = "Ending turn...";
 
     try {
-        await update(
-            ref(db, "rooms/" + room),
-            {
-                turn: next,
-                guess: null
-            }
-        );
+        await update(ref(db, "rooms/" + room), {
+            turn: next,
+            guess: null
+        });
 
-        // Keep this browser's state immediately in sync as well.
         currentRoomData.turn = next;
-
         updateGameHeader(currentRoomData);
 
     } catch (e) {
         console.error("End turn failed:", e);
-
         document.getElementById("gameStatus").textContent =
             "Could not end turn: " + (e.message || "Firebase error");
-
         updateGameHeader(currentRoomData);
     }
 };
@@ -2103,30 +2106,22 @@ async function makeGuess(index) {
     document.getElementById("guessButton").disabled = true;
     document.getElementById("endTurnButton").disabled = true;
     document.getElementById("guessButton").textContent = "🎯 GUESS";
-    document.getElementById("gameStatus").textContent =
-        "Checking your guess...";
+    document.getElementById("gameStatus").textContent = "Checking your guess...";
 
     try {
-        await set(
-            ref(db, "rooms/" + room + "/guess"),
-            {
-                player: Number(myPlayer),
-                characterId: character.id,
-                timestamp: Date.now()
-            }
-        );
+        await set(ref(db, "rooms/" + room + "/guess"), {
+            player: Number(myPlayer),
+            characterId: character.id,
+            timestamp: Date.now()
+        });
 
-        // The opponent will validate the guess against their private
-        // character and change the room status to "finished".
         document.getElementById("gameStatus").textContent =
             "Waiting for the result...";
 
     } catch (e) {
         console.error("Guess submission failed:", e);
-
         document.getElementById("gameStatus").textContent =
             "Could not submit guess: " + (e.message || "Firebase error");
-
         updateGameHeader(currentRoomData);
     }
 }
