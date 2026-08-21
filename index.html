@@ -1975,27 +1975,34 @@ async function beginPlaying() {
 
 function showGameScreen(data) {
 
-    showOnly(
-        "game"
-    );
+    showOnly("game");
 
+    board = data.board;
 
-    board =
-        data.board;
-
+    /*
+        Only render the board when entering
+        the game or when the board changes.
+    */
 
     renderBoard();
 
+    updateGameHeader(data);
 
-    updateGameHeader(
-        data
-    );
+    /*
+        Do NOT restart the timer every time
+        Firebase sends an update.
+    */
 
+    if (
+        !timerInterval ||
+        window.lastTurnStarted !== data.turnStarted
+    ) {
 
-    startTimer(
-        data
-    );
+        window.lastTurnStarted =
+            data.turnStarted;
 
+        startTimer(data);
+    }
 }
 
 
