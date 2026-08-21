@@ -2384,7 +2384,6 @@ function() {
 
 async function makeGuess(index) {
 
-    // You can only guess during your own turn
     if (
         !guessMode ||
         !currentRoomData ||
@@ -2393,65 +2392,13 @@ async function makeGuess(index) {
         return;
     }
 
-    const opponent =
-        myPlayer === 1 ? 2 : 1;
 
-    const opponentUid =
-        opponent === 1
-            ? currentRoomData.player1.uid
-            : currentRoomData.player2.uid;
-
-
-    /*
-        Get the opponent's secret character.
-
-        This works for our current prototype.
-        Later we'll move this verification to
-        a trusted backend so players can't inspect
-        Firebase and discover the answer.
-    */
-
-    const secretRef =
-        ref(
-            db,
-            "rooms/" +
-            room +
-            "/private/" +
-            opponentUid +
-            "/secret"
-        );
-
-
-    const snapshot =
-        await get(secretRef);
-
-
-    if (!snapshot.exists()) {
-
-        alert(
-            "The opponent hasn't selected a character yet."
-        );
-
-        return;
-
-    }
-
-
-    const opponentSecret =
-        snapshot.val();
-
-
-    const selectedCharacter =
+    const character =
         board[index];
 
 
-    const correct =
-        opponentSecret.id ===
-        selectedCharacter.id;
-
-
     /*
-        Stop guess mode
+        Leave guess mode immediately.
     */
 
     guessMode = false;
@@ -2469,24 +2416,43 @@ async function makeGuess(index) {
         "🎯 GUESS";
 
 
-    /*
-        Correct:
-        Current player wins.
+    document
+        .getElementById("gameStatus")
+        .textContent =
+        "Waiting for opponent to verify the guess...";
 
-        Wrong:
-        Opponent wins.
+
+    /*
+        Send the guess to Firebase.
+
+        We DON'T send or request the secret.
     */
 
-    const winner =
-        correct
-            ? myPlayer
-            : opponent;
+    const guessRef =
+        ref(
+            db,
+            "rooms/" +
+            room +
+            "/guess"
+        );
 
 
-    await finishGame(
-        winner,
-        correct
+    await set(
+        guessRef,
+        {
+
+            player:
+                myPlayer,
+
+            characterId:
+                character.id,
+
+            timestamp:
+                Date.now()
+
+        }
     );
+
 }
 
 /* =========================================
