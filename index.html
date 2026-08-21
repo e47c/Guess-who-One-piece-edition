@@ -1868,7 +1868,7 @@ function waitForBothPlayers() {
        automatically.
     */
 
-    onValue(
+    const unsubscribeWait = onValue(
         roomRef,
         snapshot => {
 
@@ -1881,6 +1881,23 @@ function waitForBothPlayers() {
 
             const data =
                 snapshot.val();
+
+
+            /*
+               This listener's only job is to notice the moment both
+               players have picked a secret and kick off the game.
+               Once the room has moved past "selecting" (playing or
+               finished), it has nothing left to do — bailing out here
+               stops it from re-firing beginPlaying() every time the
+               room updates later (e.g. when a guess resolves), which
+               was resetting status back to "playing" mid-round.
+            */
+
+            if (
+                data.status !== "selecting"
+            ) {
+                return;
+            }
 
 
             const player1Ready =
@@ -1923,6 +1940,9 @@ function waitForBothPlayers() {
 
                 }
 
+                // Job done — stop listening so this can't fire again.
+                unsubscribeWait();
+
             }
 
         }
@@ -1940,7 +1960,7 @@ let lastGameTurn = null;
 let resultShown = false;
 
 async function beginPlaying() {
-    if (!currentRoomData || myPlayer !== 1 || currentRoomData.status === "playing") return;
+    if (!currentRoomData || myPlayer !== 1 || currentRoomData.status !== "selecting") return;
     resultShown = false;
     await update(ref(db, "rooms/" + room), { status: "playing", turn: 1, guess: null });
 }
