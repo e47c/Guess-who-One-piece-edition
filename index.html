@@ -2053,28 +2053,34 @@ function renderBoard() {
 
 
             card.onclick =
-                function() {
+    function() {
 
-                    if (
-                        !guessMode
-                    ) {
+        /*
+            Guess mode:
+            clicking a card attempts a guess.
+        */
 
-                        card.classList.toggle(
-                            "eliminated"
-                        );
+        if (guessMode) {
 
-                    }
+            makeGuess(
+                index
+            );
 
-                    else {
+            return;
 
-                        makeGuess(
-                            index
-                        );
+        }
 
-                    }
 
-                };
+        /*
+            Normal mode:
+            clicking a card eliminates/reveals it.
+        */
 
+        card.classList.toggle(
+            "eliminated"
+        );
+
+    };
 
             element.appendChild(
                 card
