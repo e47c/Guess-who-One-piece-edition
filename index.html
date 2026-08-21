@@ -1426,13 +1426,15 @@ function listenToRoom() {
         }
 
         currentRoomData = snapshot.val();
-        updateLobby(currentRoomData);
 
-        if (currentRoomData.status === "selecting") {
+        if (currentRoomData.status === "waiting") {
+            updateLobby(currentRoomData);
+            showOnly("lobby");
+        } else if (currentRoomData.status === "selecting") {
+            const startButton = document.getElementById("startButton");
+            if (startButton) startButton.classList.add("hidden");
             const secretScreen = document.getElementById("secret");
-            if (secretScreen.classList.contains("hidden")) {
-                showSecretScreen();
-            }
+            if (secretScreen.classList.contains("hidden")) showSecretScreen();
         } else if (currentRoomData.status === "playing") {
             showGameScreen(currentRoomData);
         } else if (currentRoomData.status === "finished") {
@@ -1446,19 +1448,13 @@ function listenToRoom() {
         const guess = snapshot.val();
 
         if (guess.status === "pending") {
-            // The guesser only waits. Their own client never tries to
-            // read the opponent's secret.
             if (guess.player === myPlayer) {
                 const status = document.getElementById("gameStatus");
                 if (status) status.textContent = "Checking your guess...";
                 return;
             }
 
-            // The player being guessed verifies against their own local secret.
-            if (!mySecretCharacter) {
-                console.error("Cannot verify guess: local secret is missing.");
-                return;
-            }
+            if (currentRoomData.status !== "playing" || !mySecretCharacter) return;
 
             const correct = mySecretCharacter.id === guess.characterId;
             const winner = correct ? guess.player : myPlayer;
@@ -1490,6 +1486,434 @@ function listenToRoom() {
             }
         }
     });
+}
+
+
+/* =========================================
+   UPDATE LOBBY
+========================================= */
+
+function updateLobby(data) {
+
+    document
+        .getElementById(
+            "p1Name"
+        )
+        .textContent =
+        data.player1
+            ? data.player1.name
+            : "Player 1";
+
+
+    document
+        .getElementById(
+            "p2Name"
+        )
+        .textContent =
+        data.player2
+            ? data.player2.name
+            : "Waiting...";
+
+
+    if (
+        data.player2
+    ) {
+
+        document
+            .getElementById(
+                "p2Status"
+            )
+            .textContent =
+            "● Connected";
+
+
+        document
+            .getElementById(
+                "p2Status"
+            )
+            .className =
+            "ready";
+
+
+        document
+            .getElementById(
+                "lobbyStatus"
+            )
+            .textContent =
+            "Both players are connected.";
+
+
+        if (
+            myPlayer === 1
+        ) {
+
+            document
+                .getElementById(
+                    "startButton"
+                )
+                .classList
+                .remove(
+                    "hidden"
+                );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================
+   START GAME
+========================================= */
+
+window.startGame =
+async function() {
+
+    if (
+        !currentRoomData
+        ||
+        !currentRoomData.player2
+    ) {
+
+        return;
+
+    }
+
+
+    const roomRef =
+        ref(
+            db,
+            "rooms/" + room
+        );
+
+
+    await update(
+        roomRef,
+        {
+
+            status:
+                "selecting",
+
+            turn:
+                1,
+
+            guess:
+                null
+
+        }
+    );
+
+};
+
+
+/* =========================================
+   SECRET SCREEN
+========================================= */
+
+function showSecretScreen() {
+
+    showOnly(
+        "secret"
+    );
+
+
+    const grid =
+        document
+            .getElementById(
+                "secretGrid"
+            );
+
+
+    grid.innerHTML = "";
+
+
+    board =
+        currentRoomData.board;
+
+
+    selectedSecret =
+        null;
+
+    mySecretCharacter = null;
+
+    document
+        .getElementById(
+            "confirmSecret"
+        )
+        .disabled =
+        true;
+
+
+    board.forEach(
+        (character, index) => {
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+
+            card.className =
+                "secret-card";
+
+
+            const img =
+                document.createElement(
+                    "img"
+                );
+
+
+            img.src =
+                character.image;
+
+
+            card.appendChild(
+                img
+            );
+
+
+            card.onclick =
+                function() {
+
+                    document
+                        .querySelectorAll(
+                            ".secret-card"
+                        )
+                        .forEach(
+                            c =>
+                                c.classList
+                                .remove(
+                                    "selected"
+                                )
+                        );
+
+
+                    card.classList.add(
+                        "selected"
+                    );
+
+
+                    selectedSecret =
+                        index;
+
+
+                    document
+                        .getElementById(
+                            "confirmSecret"
+                        )
+                        .disabled =
+                        false;
+
+                };
+
+
+            grid.appendChild(
+                card
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================
+   CONFIRM SECRET
+========================================= */
+
+window.confirmSecret =
+async function() {
+
+    if (
+        selectedSecret === null
+    ) {
+
+        return;
+
+    }
+
+
+    const secret =
+        board[
+            selectedSecret
+        ];
+
+    // Keep a local copy for guess verification.
+    mySecretCharacter = secret;
+
+    const privateRef =
+        ref(
+            db,
+            "rooms/"
+            + room
+            + "/private/"
+            + user.uid
+        );
+
+
+    await set(
+        privateRef,
+        {
+
+            secret:
+                secret
+
+        }
+    );
+
+
+    /*
+       Mark this player ready.
+    */
+
+    const playerPath =
+        myPlayer === 1
+            ? "player1/ready"
+            : "player2/ready";
+
+
+    await set(
+        ref(
+            db,
+            "rooms/"
+            + room
+            + "/"
+            + playerPath
+        ),
+        true
+    );
+
+
+    waitForBothPlayers();
+
+};
+
+
+/* =========================================
+   WAIT FOR BOTH SECRET PICKS
+========================================= */
+
+function waitForBothPlayers() {
+
+    const secretGrid =
+        document.getElementById(
+            "secretGrid"
+        );
+
+    secretGrid.innerHTML = "";
+
+
+    document
+        .getElementById(
+            "confirmSecret"
+        )
+        .classList
+        .add("hidden");
+
+
+    const message =
+        document.createElement("p");
+
+
+    message.id =
+        "waitingMessage";
+
+
+    message.style.textAlign =
+        "center";
+
+
+    message.style.color =
+        "#888";
+
+
+    message.textContent =
+        "Waiting for both players to choose...";
+
+
+    secretGrid.appendChild(
+        message
+    );
+
+
+    const roomRef =
+        ref(
+            db,
+            "rooms/" + room
+        );
+
+
+    /*
+       IMPORTANT:
+
+       onValue keeps listening to Firebase.
+
+       So when the other player finally
+       chooses their character, this runs
+       automatically.
+    */
+
+    onValue(
+        roomRef,
+        snapshot => {
+
+            if (
+                !snapshot.exists()
+            ) {
+                return;
+            }
+
+
+            const data =
+                snapshot.val();
+
+
+            const player1Ready =
+                data.player1
+                &&
+                data.player1.ready === true;
+
+
+            const player2Ready =
+                data.player2
+                &&
+                data.player2.ready === true;
+
+
+            /*
+               Both players have selected
+               their characters.
+            */
+
+            if (
+                player1Ready
+                &&
+                player2Ready
+            ) {
+
+                /*
+                   Only Player 1 starts the
+                   actual game.
+
+                   Player 2 will receive the
+                   "playing" status through
+                   the normal room listener.
+                */
+
+                if (
+                    myPlayer === 1
+                ) {
+
+                    beginPlaying();
+
+                }
+
+            }
+
+        }
+    );
+
 }
 
 /* =========================================
@@ -1652,23 +2076,9 @@ function updateGameHeader(data) {
 ========================================= */
 
 window.endTurn = async function() {
-    if (!currentRoomData) {
-        console.error("END TURN: no room data");
-        return;
-    }
-
-    if (currentRoomData.status !== "playing") {
-        return;
-    }
-
-    if (Number(currentRoomData.turn) !== Number(myPlayer)) {
-        console.error("END TURN: not your turn");
-        return;
-    }
-
-    if (currentRoomData.guess && currentRoomData.guess.status === "pending") {
-        return;
-    }
+    if (!currentRoomData || currentRoomData.status !== "playing") return;
+    if (Number(currentRoomData.turn) !== Number(myPlayer)) return;
+    if (currentRoomData.guess?.status === "pending") return;
 
     const nextPlayer = myPlayer === 1 ? 2 : 1;
     const button = document.getElementById("endTurnButton");
@@ -1683,46 +2093,21 @@ window.endTurn = async function() {
     status.textContent = "Ending your turn...";
 
     try {
-        // Use a transaction so two clients cannot accidentally overwrite
-        // each other's turn at the same time.
-        const result = await runTransaction(roomRefForCurrentGame(), current => {
-            if (!current || current.status !== "playing") return;
-            if (Number(current.turn) !== Number(myPlayer)) return;
-            if (current.guess && current.guess.status === "pending") return;
-
-            current.turn = nextPlayer;
-            current.guess = null;
-            return current;
-        });
-
-        if (!result.committed) {
-            throw new Error("Turn was not committed. The room state changed.");
-        }
+        await update(ref(db, "rooms/" + room), { turn: nextPlayer });
     } catch (error) {
         console.error("END TURN failed:", error);
         button.disabled = false;
-        if (currentRoomData && Number(currentRoomData.turn) === Number(myPlayer)) {
-            guessButton.disabled = false;
-        }
-        status.textContent = "END TURN failed: " + (error.message || "Firebase write failed.");
+        guessButton.disabled = false;
+        status.textContent = "END TURN failed: " + error.message;
     }
 };
-
-function roomRefForCurrentGame() {
-    return ref(db, "rooms/" + room);
-}
-
-/* =========================================
-   GUESS MODE
-========================================= */
 
 window.toggleGuess = function() {
     if (!currentRoomData || currentRoomData.status !== "playing") return;
     if (Number(currentRoomData.turn) !== Number(myPlayer)) return;
-    if (currentRoomData.guess && currentRoomData.guess.status === "pending") return;
+    if (currentRoomData.guess?.status === "pending") return;
 
     guessMode = !guessMode;
-
     const boardElement = document.getElementById("board");
     const guessButton = document.getElementById("guessButton");
     const status = document.getElementById("gameStatus");
@@ -1738,14 +2123,10 @@ window.toggleGuess = function() {
     }
 };
 
-/* =========================================
-   MAKE GUESS
-========================================= */
-
 async function makeGuess(index) {
     if (!guessMode || !currentRoomData || currentRoomData.status !== "playing") return;
     if (Number(currentRoomData.turn) !== Number(myPlayer)) return;
-    if (currentRoomData.guess && currentRoomData.guess.status === "pending") return;
+    if (currentRoomData.guess?.status === "pending") return;
 
     const character = board[index];
     if (!character) return;
@@ -1772,7 +2153,7 @@ async function makeGuess(index) {
         console.error("Guess submission failed:", error);
         guessButton.disabled = false;
         endTurnButton.disabled = false;
-        status.textContent = "Guess failed: " + (error.message || "Firebase write failed.");
+        status.textContent = "Guess failed: " + error.message;
     }
 }
 
