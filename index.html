@@ -1428,7 +1428,7 @@ function listenToRoom() {
             db,
             "rooms/" + room
         );
-
+let lastProcessedGuess = null;
 
     onValue(
         roomRef,
@@ -1538,7 +1538,14 @@ function listenToRoom() {
 
             const guess =
                 snapshot.val();
+if (
+    lastProcessedGuess === guess.timestamp
+) {
+    return;
+}
 
+lastProcessedGuess =
+    guess.timestamp;
 
             /*
                 Ignore our own guesses.
