@@ -2374,27 +2374,19 @@ function() {
    MAKE GUESS
 ========================================= */
 
-async function makeGuess(
-    index
-) {
+async function makeGuess(index) {
 
+    // You can only guess during your own turn
     if (
-        !guessMode
-        ||
-        currentRoomData.turn
-        !== myPlayer
+        !guessMode ||
+        !currentRoomData ||
+        currentRoomData.turn !== myPlayer
     ) {
-
         return;
-
     }
 
-
     const opponent =
-        myPlayer === 1
-            ? 2
-            : 1;
-
+        myPlayer === 1 ? 2 : 1;
 
     const opponentUid =
         opponent === 1
@@ -2403,42 +2395,30 @@ async function makeGuess(
 
 
     /*
-       Read opponent secret.
+        Get the opponent's secret character.
 
-       NOTE:
-       Firebase rules prevent this read
-       for the opponent in the current
-       security setup.
-
-       Therefore the final secure version
-       will verify the guess through a
-       trusted backend.
-
-       This prototype keeps the game flow
-       ready for that system.
+        This works for our current prototype.
+        Later we'll move this verification to
+        a trusted backend so players can't inspect
+        Firebase and discover the answer.
     */
-
 
     const secretRef =
         ref(
             db,
-            "rooms/"
-            + room
-            + "/private/"
-            + opponentUid
-            + "/secret"
+            "rooms/" +
+            room +
+            "/private/" +
+            opponentUid +
+            "/secret"
         );
 
 
     const snapshot =
-        await get(
-            secretRef
-        );
+        await get(secretRef);
 
 
-    if (
-        !snapshot.exists()
-    ) {
+    if (!snapshot.exists()) {
 
         alert(
             "The opponent hasn't selected a character yet."
@@ -2449,14 +2429,45 @@ async function makeGuess(
     }
 
 
-    const secret =
+    const opponentSecret =
         snapshot.val();
 
 
-    const correct =
-        secret.id
-        === board[index].id;
+    const selectedCharacter =
+        board[index];
 
+
+    const correct =
+        opponentSecret.id ===
+        selectedCharacter.id;
+
+
+    /*
+        Stop guess mode
+    */
+
+    guessMode = false;
+
+
+    document
+        .getElementById("board")
+        .classList
+        .remove("guess-mode");
+
+
+    document
+        .getElementById("guessButton")
+        .textContent =
+        "🎯 GUESS";
+
+
+    /*
+        Correct:
+        Current player wins.
+
+        Wrong:
+        Opponent wins.
+    */
 
     const winner =
         correct
@@ -2468,9 +2479,7 @@ async function makeGuess(
         winner,
         correct
     );
-
 }
-
 
 /* =========================================
    FINISH
@@ -2481,11 +2490,20 @@ async function finishGame(
     correct
 ) {
 
-    await update(
+    clearInterval(
+        timerInterval
+    );
+
+
+    const roomRef =
         ref(
             db,
             "rooms/" + room
-        ),
+        );
+
+
+    await update(
+        roomRef,
         {
 
             status:
@@ -2497,7 +2515,10 @@ async function finishGame(
             result:
                 correct
                     ? "correct"
-                    : "wrong"
+                    : "wrong",
+
+            finishedAt:
+                Date.now()
 
         }
     );
