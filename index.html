@@ -2173,103 +2173,87 @@ function updateGameHeader(
 
 function startTimer(data) {
 
-    clearInterval(
-        timerInterval
-    );
+    clearInterval(timerInterval);
+
+    const timer =
+        document.getElementById("timer");
+
+    function updateTimer() {
+
+        if (!data.turnStarted) {
+
+            timer.textContent = "60";
+
+            return;
+        }
+
+        const elapsed =
+            Math.floor(
+                (Date.now() - data.turnStarted) / 1000
+            );
+
+        const remaining =
+            Math.max(
+                0,
+                60 - elapsed
+            );
+
+        timer.textContent =
+            remaining;
+
+        timer.className =
+            "timer";
 
 
-    if (
-        !data.turnStarted
-    ) {
+        if (remaining <= 20) {
 
-        return;
+            timer.classList.add(
+                "warning"
+            );
+
+        }
+
+        if (remaining <= 10) {
+
+            timer.classList.add(
+                "danger"
+            );
+
+        }
+
+
+        if (remaining <= 0) {
+
+            clearInterval(
+                timerInterval
+            );
+
+            /*
+                Only the player whose turn it is
+                changes the turn.
+            */
+
+            if (
+                currentRoomData &&
+                currentRoomData.turn === myPlayer
+            ) {
+
+                changeTurn();
+            }
+
+        }
 
     }
 
 
+    updateTimer();
+
+
     timerInterval =
         setInterval(
-            async function() {
-
-                const elapsed =
-                    Math.floor(
-                        (
-                            Date.now()
-                            -
-                            data.turnStarted
-                        )
-                        / 1000
-                    );
-
-
-                const remaining =
-                    Math.max(
-                        0,
-                        60 - elapsed
-                    );
-
-
-                const timer =
-                    document
-                        .getElementById(
-                            "timer"
-                        );
-
-
-                timer.textContent =
-                    remaining;
-
-
-                timer.className =
-                    "timer";
-
-
-                if (
-                    remaining <= 20
-                ) {
-
-                    timer.classList.add(
-                        "warning"
-                    );
-
-                }
-
-
-                if (
-                    remaining <= 10
-                ) {
-
-                    timer.classList.add(
-                        "danger"
-                    );
-
-                }
-
-
-                if (
-                    remaining <= 0
-                ) {
-
-                    clearInterval(
-                        timerInterval
-                    );
-
-
-                    if (
-                        data.turn
-                        === myPlayer
-                    ) {
-
-                        await changeTurn();
-
-                    }
-
-                }
-
-            },
+            updateTimer,
             250
         );
-
 }
 
 
