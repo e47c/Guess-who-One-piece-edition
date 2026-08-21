@@ -14,9 +14,2258 @@
 
 * {
     box-sizing: border-box;
+}<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0">
+
+<title>Custom Guess Who</title>
+
+<style>
+
+* {
+    box-sizing: border-box;
 }
 
 body {
+    margin: 0;
+    background: #0b0b0e;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+button {
+    border: none;
+    border-radius: 9px;
+    padding: 12px 18px;
+    color: white;
+    background: #2563eb;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+button:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+input {
+    width: 100%;
+    padding: 13px;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #111;
+    color: white;
+    font-size: 16px;
+}
+
+.hidden {
+    display: none !important;
+}
+
+
+/* ================================
+   HOME
+================================ */
+
+.screen {
+    min-height: 100vh;
+    padding: 25px;
+}
+
+.center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.panel {
+    width: 100%;
+    max-width: 750px;
+    background: #17171b;
+    border: 1px solid #29292e;
+    border-radius: 18px;
+    padding: 30px;
+}
+
+h1 {
+    text-align: center;
+}
+
+.subtitle {
+    text-align: center;
+    color: #888;
+    margin-bottom: 30px;
+}
+
+.field {
+    margin-bottom: 15px;
+}
+
+label {
+    display: block;
+    color: #aaa;
+    margin-bottom: 7px;
+}
+
+.sizes {
+    display: flex;
+    gap: 10px;
+}
+
+.size {
+    flex: 1;
+}
+
+.size.selected {
+    background: #16a34a;
+}
+
+.main-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.secondary {
+    background: #333;
+}
+
+.join-area {
+    margin-top: 15px;
+}
+
+
+/* ================================
+   LOBBY
+================================ */
+
+.room-code {
+    text-align: center;
+    font-size: 42px;
+    letter-spacing: 8px;
+    font-weight: bold;
+    color: #60a5fa;
+    margin: 20px;
+}
+
+.player {
+    display: flex;
+    justify-content: space-between;
+    background: #222228;
+    padding: 15px;
+    border-radius: 9px;
+    margin: 8px 0;
+}
+
+.ready {
+    color: #22c55e;
+}
+
+
+/* ================================
+   SECRET
+================================ */
+
+.secret-grid {
+    max-width: 1100px;
+    margin: 25px auto;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 8px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.secret-card {
+    aspect-ratio: 1;
+    border: 3px solid #333;
+    border-radius: 7px;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.secret-card:hover {
+    border-color: #3b82f6;
+}
+
+.secret-card.selected {
+    border-color: #22c55e;
+}
+
+.secret-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+
+/* ================================
+   GAME
+================================ */
+
+.game-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #151519;
+    border-bottom: 1px solid #333;
+    padding: 12px;
+}
+
+.game-header-inner {
+    max-width: 1450px;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.turn {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.status {
+    color: #999;
+    font-size: 13px;
+}
+
+
+
+
+
+
+
+.board {
+    width: 97%;
+    max-width: 1450px;
+    margin: 15px auto;
+    display: grid;
+    gap: 8px;
+}
+
+.board.size24 {
+    grid-template-columns: repeat(6, 1fr);
+}
+
+.board.size48 {
+    grid-template-columns: repeat(8, 1fr);
+}
+
+.board.size96 {
+    grid-template-columns: repeat(12, 1fr);
+}
+
+.card {
+    aspect-ratio: 1;
+    border-radius: 7px;
+    overflow: hidden;
+    border: 3px solid #333;
+    cursor: pointer;
+    position: relative;
+}
+
+.card:hover {
+    border-color: #3b82f6;
+}
+
+.card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.card.eliminated {
+    opacity: .17;
+    filter: grayscale(1);
+}
+
+.card.eliminated::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(
+            45deg,
+            transparent 47%,
+            white 49%,
+            white 51%,
+            transparent 53%
+        );
+}
+
+.guess-mode .card {
+    border-color: #f59e0b;
+}
+
+
+/* ================================
+   RESULT
+================================ */
+
+.result {
+    max-width: 850px;
+    margin: auto;
+    text-align: center;
+}
+
+.characters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.character {
+    background: #222228;
+    padding: 15px;
+    border-radius: 12px;
+}
+
+.character img {
+    width: 100%;
+    max-width: 270px;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 10px;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.stat {
+    background: #222228;
+    padding: 20px;
+    border-radius: 12px;
+}
+
+.big-number {
+    font-size: 32px;
+    font-weight: bold;
+}
+
+.actions {
+    margin-top: 25px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+}
+
+
+/* ================================
+   MOBILE
+================================ */
+
+@media(max-width: 700px) {
+
+    .main-buttons {
+        grid-template-columns: 1fr;
+    }
+
+    .secret-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .board.size24,
+    .board.size48,
+    .board.size96 {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .characters,
+    .stats {
+        grid-template-columns: 1fr;
+    }
+
+    .game-header-inner {
+        flex-wrap: wrap;
+    }
+
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+
+<!-- =========================================
+     HOME
+========================================= -->
+
+<div id="home"
+     class="screen center">
+
+<div class="panel">
+
+<h1>🎴 Custom Guess Who</h1>
+
+<div class="subtitle">
+Play online with a friend
+</div>
+
+
+<div class="field">
+
+<label>Your Name</label>
+
+<input
+    id="name"
+    maxlength="20"
+    placeholder="Enter your name">
+
+</div>
+
+
+<div class="field">
+
+<label>Number of Cards</label>
+
+<div class="sizes">
+
+<button
+    id="size24"
+    class="size selected"
+    onclick="setSize(24)">
+24
+</button>
+
+<button
+    id="size48"
+    class="size"
+    onclick="setSize(48)">
+48
+</button>
+
+<button
+    id="size96"
+    class="size"
+    onclick="setSize(96)">
+96
+</button>
+
+</div>
+
+</div>
+
+
+<div class="main-buttons">
+
+<button onclick="createRoom()">
+🏠 CREATE ROOM
+</button>
+
+<button
+    class="secondary"
+    onclick="showJoin()">
+🔗 JOIN ROOM
+</button>
+
+</div>
+
+
+<div
+    id="joinArea"
+    class="join-area hidden">
+
+<input
+    id="joinCode"
+    maxlength="6"
+    placeholder="ROOM CODE"
+    style="text-transform:uppercase">
+
+<button
+    style="width:100%;margin-top:8px"
+    onclick="joinRoom()">
+
+JOIN ROOM
+
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+<!-- =========================================
+     LOBBY
+========================================= -->
+
+<div
+    id="lobby"
+    class="screen center hidden">
+
+<div class="panel">
+
+<h1>🎮 Game Lobby</h1>
+
+<p style="text-align:center">
+Room Code
+</p>
+
+<div
+    id="roomCode"
+    class="room-code">
+------
+</div>
+
+<button
+    style="display:block;margin:auto"
+    onclick="copyRoomCode()">
+
+📋 COPY CODE
+
+</button>
+
+
+<div style="margin-top:25px">
+
+<div class="player">
+
+<span id="p1Name">
+Player 1
+</span>
+
+<span class="ready">
+● Ready
+</span>
+
+</div>
+
+
+<div class="player">
+
+<span id="p2Name">
+Waiting...
+</span>
+
+<span id="p2Status">
+○ Waiting
+</span>
+
+</div>
+
+</div>
+
+
+<p
+    id="lobbyStatus"
+    style="text-align:center;color:#888">
+
+Waiting for opponent...
+
+</p>
+
+
+<button
+    id="startButton"
+    class="hidden"
+    style="width:100%;margin-top:15px"
+    onclick="startGame()">
+
+START GAME
+
+</button>
+
+</div>
+
+</div>
+
+
+
+<!-- =========================================
+     SECRET
+========================================= -->
+
+<div
+    id="secret"
+    class="screen hidden">
+
+<div style="text-align:center">
+
+<h1>
+Choose Your Secret Character
+</h1>
+
+<p style="color:#888">
+
+Your opponent won't see your choice.
+
+</p>
+
+</div>
+
+
+<div
+    id="secretGrid"
+    class="secret-grid">
+</div>
+
+
+<div style="text-align:center">
+
+<button
+    id="confirmSecret"
+    disabled
+    onclick="confirmSecret()">
+
+CONFIRM CHARACTER
+
+</button>
+
+</div>
+
+</div>
+
+
+
+<!-- =========================================
+     GAME
+========================================= -->
+
+<div
+    id="game"
+    class="hidden">
+
+
+<div class="game-header">
+
+<div class="game-header-inner">
+
+
+<div>
+
+<div
+    id="turnText"
+    class="turn">
+
+Loading...
+
+</div>
+
+<div
+    id="gameStatus"
+    class="status">
+
+</div>
+
+</div>
+
+
+<button id="guessButton" onclick="toggleGuess()">🎯 GUESS</button>
+<button id="endTurnButton" onclick="endTurn()">END TURN</button>
+
+
+</div>
+
+</div>
+
+
+<div
+    id="board"
+    class="board">
+</div>
+
+
+</div>
+
+
+
+<!-- =========================================
+     RESULT
+========================================= -->
+
+<div
+    id="result"
+    class="screen hidden">
+
+<div class="panel result">
+
+<h1 id="winnerText">
+🏆 WINNER
+</h1>
+
+<p id="resultMessage"></p>
+
+
+<div class="characters">
+
+
+<div class="character">
+
+<h3 id="resultName1">
+Player 1
+</h3>
+
+<img
+    id="resultImage1">
+
+<p>
+Secret Character
+</p>
+
+</div>
+
+
+<div class="character">
+
+<h3 id="resultName2">
+Player 2
+</h3>
+
+<img
+    id="resultImage2">
+
+<p>
+Secret Character
+</p>
+
+</div>
+
+
+</div>
+
+
+<div class="stats">
+
+
+<div class="stat">
+
+<div id="statName1">
+Player 1
+</div>
+
+<div
+    id="wins1"
+    class="big-number">
+
+0
+
+</div>
+
+<div>
+Total Wins
+</div>
+
+<div id="streak1">
+🔥 Streak: 0
+</div>
+
+<div id="best1">
+Best: 0
+</div>
+
+</div>
+
+
+<div class="stat">
+
+<div id="statName2">
+Player 2
+</div>
+
+<div
+    id="wins2"
+    class="big-number">
+
+0
+
+</div>
+
+<div>
+Total Wins
+</div>
+
+<div id="streak2">
+🔥 Streak: 0
+</div>
+
+<div id="best2">
+Best: 0
+</div>
+
+</div>
+
+
+</div>
+
+
+<div class="actions">
+
+<button onclick="rematch()">
+🔄 REMATCH
+</button>
+
+<button
+    class="secondary"
+    onclick="location.reload()">
+
+MAIN MENU
+
+</button>
+
+</div>
+
+
+</div>
+
+</div>
+
+
+
+<!-- =========================================
+     FIREBASE
+========================================= -->
+
+<script type="module">
+
+import {
+    initializeApp
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+
+import {
+    getDatabase,
+    ref,
+    set,
+    get,
+    update,
+    onValue,
+    remove,
+    onDisconnect
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-database.js";
+
+import {
+    getAuth,
+    signInAnonymously
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+
+/* =========================================
+   FIREBASE CONFIG
+========================================= */
+
+const firebaseConfig = {
+
+    apiKey:
+        "AIzaSyBNyolOo_5p7nJeSko6mK5kFaTWfjAKgTQ",
+
+    authDomain:
+        "custom-guess-who-f9440.firebaseapp.com",
+
+    databaseURL:
+        "https://custom-guess-who-f9440-default-rtdb.europe-west1.firebasedatabase.app",
+
+    projectId:
+        "custom-guess-who-f9440",
+
+    storageBucket:
+        "custom-guess-who-f9440.firebasestorage.app",
+
+    messagingSenderId:
+        "928168672302",
+
+    appId:
+        "1:928168672302:web:f5c6a0803cd3affb1af3bf"
+
+};
+
+
+const app =
+    initializeApp(firebaseConfig);
+
+
+const db =
+    getDatabase(app);
+
+
+const auth =
+    getAuth(app);
+
+
+/* =========================================
+   GLOBAL GAME VARIABLES
+========================================= */
+
+let user = null;
+
+let room = "";
+
+let myPlayer = null;
+
+let boardSize = 24;
+
+let board = [];
+
+let selectedSecret = null;
+let mySecret = null;
+let eliminatedCards = new Set();
+
+let guessMode = false;
+
+
+let currentRoomData = null;
+
+
+/* =========================================
+   SIGN IN
+========================================= */
+
+try {
+
+    const result =
+        await signInAnonymously(auth);
+
+    user =
+        result.user;
+
+    console.log(
+        "Firebase UID:",
+        user.uid
+    );
+
+}
+
+catch(error) {
+
+    console.error(error);
+
+    alert(
+        "Firebase authentication failed:\n\n"
+        + error.message
+    );
+
+}
+
+
+/* =========================================
+   CHARACTER LIST
+=========================================
+
+   TEMPORARY.
+
+   Replace these with your own image paths:
+
+   images/luffy.jpg
+   images/zoro.jpg
+   etc.
+
+========================================= */
+
+const CHARACTER_LIBRARY = [
+
+    "images/character1.jpg",
+    "images/character2.jpg",
+    "images/character3.jpg",
+    "images/character4.jpg",
+    "images/character5.jpg",
+    "images/character6.jpg",
+    "images/character7.jpg",
+    "images/character8.jpg",
+    "images/character9.jpg",
+    "images/character10.jpg",
+    "images/character11.jpg",
+    "images/character12.jpg",
+    "images/character13.jpg",
+    "images/character14.jpg",
+    "images/character15.jpg",
+    "images/character16.jpg",
+    "images/character17.jpg",
+    "images/character18.jpg",
+    "images/character19.jpg",
+    "images/character20.jpg",
+    "images/character21.jpg",
+    "images/character22.jpg",
+    "images/character23.jpg",
+    "images/character24.jpg",
+    "images/character25.jpg",
+    "images/character26.jpg",
+    "images/character27.jpg",
+    "images/character28.jpg",
+    "images/character29.jpg"
+];
+
+
+/* =========================================
+   HELPERS
+========================================= */
+
+function showOnly(id) {
+
+    document
+        .querySelectorAll(
+            "#home,#lobby,#secret,#game,#result"
+        )
+        .forEach(
+            el =>
+                el.classList.add("hidden")
+        );
+
+
+    const element =
+        document.getElementById(id);
+
+
+    element.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+function setSize(size) {
+
+    boardSize =
+        size;
+
+
+    document
+        .querySelectorAll(".size")
+        .forEach(
+            btn =>
+                btn.classList.remove(
+                    "selected"
+                )
+        );
+
+
+    document
+        .getElementById(
+            "size" + size
+        )
+        .classList.add(
+            "selected"
+        );
+
+}
+
+
+function generateCode() {
+
+    const chars =
+        "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+    let result = "";
+
+    for (
+        let i = 0;
+        i < 6;
+        i++
+    ) {
+
+        result +=
+            chars[
+                Math.floor(
+                    Math.random()
+                    * chars.length
+                )
+            ];
+
+    }
+
+    return result;
+
+}
+
+
+function shuffle(array) {
+
+    const result =
+        [...array];
+
+    for (
+        let i =
+            result.length - 1;
+        i > 0;
+        i--
+    ) {
+
+        const j =
+            Math.floor(
+                Math.random()
+                * (i + 1)
+            );
+
+        [
+            result[i],
+            result[j]
+        ] =
+        [
+            result[j],
+            result[i]
+        ];
+
+    }
+
+    return result;
+
+}
+
+
+/* =========================================
+   CREATE ROOM
+========================================= */
+
+window.createRoom =
+async function() {
+    try {
+
+    const name =
+        document
+            .getElementById("name")
+            .value
+            .trim();
+
+
+    if (!name) {
+
+        alert(
+            "Enter your name first."
+        );
+
+        return;
+
+    }
+
+
+    if (
+        CHARACTER_LIBRARY.length
+        < boardSize
+    ) {
+
+        alert(
+            "You need at least "
+            + boardSize
+            + " images in your library."
+        );
+
+        return;
+
+    }
+
+
+    room =
+        generateCode();
+
+
+    myPlayer =
+        1;
+
+
+    const selected =
+        shuffle(
+            CHARACTER_LIBRARY
+        ).slice(
+            0,
+            boardSize
+        );
+
+
+    board =
+        selected.map(
+            (image, index) => ({
+                id:
+                    "c" + index,
+                image:
+                    image
+            })
+        );
+
+
+    const roomRef =
+        ref(
+            db,
+            "rooms/" + room
+        );
+
+
+    await set(
+        roomRef,
+        {
+
+            board:
+                board,
+
+            boardSize:
+                boardSize,
+
+            player1: {
+
+                uid:
+                    user.uid,
+
+                name:
+                    name,
+
+                ready:
+                    false
+
+            },
+
+            player2:
+                null,
+
+            status:
+                "waiting",
+
+            turn:
+                1,
+
+            winner:
+                null,
+
+            result:
+                null
+
+        }
+    );
+
+
+    /*
+       If this player disconnects while
+       waiting, Firebase removes the room.
+    */
+
+    onDisconnect(roomRef)
+        .remove();
+
+
+    openLobby();
+
+};
+
+
+/* =========================================
+   JOIN ROOM
+========================================= */
+
+window.joinRoom =
+async function() {
+    try {
+
+    const name =
+        document
+            .getElementById("name")
+            .value
+            .trim();
+
+
+    const code =
+        document
+            .getElementById("joinCode")
+            .value
+            .trim()
+            .toUpperCase();
+
+
+    if (!name) {
+
+        alert(
+            "Enter your name first."
+        );
+
+        return;
+
+    }
+
+
+    if (
+        code.length !== 6
+    ) {
+
+        alert(
+            "Enter a 6-character room code."
+        );
+
+        return;
+
+    }
+
+
+    const roomRef =
+        ref(
+            db,
+            "rooms/" + code
+        );
+
+
+    const snapshot =
+        await get(roomRef);
+
+
+    if (!snapshot.exists()) {
+
+        alert(
+            "Room not found."
+        );
+
+        return;
+
+    }
+
+
+    const data =
+        snapshot.val();
+
+
+    if (
+        data.player2
+    ) {
+
+        alert(
+            "This room is already full."
+        );
+
+        return;
+
+    }
+
+
+    if (
+        data.player1.uid
+        === user.uid
+    ) {
+
+        alert(
+            "You cannot join your own room."
+        );
+
+        return;
+
+    }
+
+
+    room =
+        code;
+
+
+    myPlayer =
+        2;
+
+
+    await update(
+        roomRef,
+        {
+
+            player2: {
+
+                uid:
+                    user.uid,
+
+                name:
+                    name,
+
+                ready:
+                    false
+
+            }
+
+        }
+    );
+
+
+    openLobby();
+
+};
+
+
+/* =========================================
+   LOBBY
+========================================= */
+
+function openLobby() {
+
+    showOnly(
+        "lobby"
+    );
+
+
+    document
+        .getElementById(
+            "roomCode"
+        )
+        .textContent =
+        room;
+
+
+    listenToRoom();
+
+}
+
+
+/* =========================================
+   LISTEN TO ROOM
+========================================= */
+
+function listenToRoom() {
+
+    const roomRef = ref(db, "rooms/" + room);
+
+    // One room listener only. It controls the visible game state.
+    onValue(roomRef, snapshot => {
+
+        if (!snapshot.exists()) {
+            alert("The room no longer exists.");
+            location.reload();
+            return;
+        }
+
+        currentRoomData = snapshot.val();
+        updateLobby(currentRoomData);
+
+        if (currentRoomData.status === "selecting") {
+            if (document.getElementById("secret").classList.contains("hidden")) {
+                showSecretScreen();
+            }
+            return;
+        }
+
+        if (currentRoomData.status === "playing") {
+            showGameScreen(currentRoomData);
+            return;
+        }
+
+        if (currentRoomData.status === "finished") {
+            showResultScreen(currentRoomData);
+        }
+    });
+
+    // Guess listener: the opponent validates the guess using their own secret.
+    const guessRef = ref(db, "rooms/" + room + "/guess");
+    let lastProcessedGuess = null;
+
+    onValue(guessRef, async snapshot => {
+        if (!snapshot.exists()) return;
+        const guess = snapshot.val();
+        const key = String(guess.timestamp || "");
+        if (!key || key === lastProcessedGuess) return;
+        lastProcessedGuess = key;
+        if (Number(guess.player) === Number(myPlayer)) return;
+        if (!currentRoomData || currentRoomData.status !== "playing") return;
+
+        try {
+            if (!mySecret) {
+                throw new Error("Your secret character is not loaded.");
+            }
+            const secret = mySecret;
+            const correct = String(secret.id) === String(guess.characterId);
+            const winner = correct ? Number(guess.player) : Number(myPlayer);
+            await update(ref(db, "rooms/" + room), {
+                status: "finished",
+                winner,
+                result: correct ? "correct" : "wrong",
+                guessedCharacter: guess.characterId,
+                finishedAt: Date.now()
+            });
+        } catch (e) {
+            console.error(e);
+            document.getElementById("gameStatus").textContent = "Guess failed: " + (e.message || "Firebase error");
+        }
+    });
+
+}
+
+/* =========================================
+   UPDATE LOBBY
+========================================= */
+
+function updateLobby(data) {
+
+    document
+        .getElementById(
+            "p1Name"
+        )
+        .textContent =
+        data.player1
+            ? data.player1.name
+            : "Player 1";
+
+
+    document
+        .getElementById(
+            "p2Name"
+        )
+        .textContent =
+        data.player2
+            ? data.player2.name
+            : "Waiting...";
+
+
+    if (
+        data.player2
+    ) {
+
+        document
+            .getElementById(
+                "p2Status"
+            )
+            .textContent =
+            "● Connected";
+
+
+        document
+            .getElementById(
+                "p2Status"
+            )
+            .className =
+            "ready";
+
+
+        document
+            .getElementById(
+                "lobbyStatus"
+            )
+            .textContent =
+            "Both players are connected.";
+
+
+        if (
+            myPlayer === 1
+        ) {
+
+            document
+                .getElementById(
+                    "startButton"
+                )
+                .classList
+                .remove(
+                    "hidden"
+                );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================
+   START GAME
+========================================= */
+
+window.startGame =
+async function() {
+
+    if (
+        !currentRoomData
+        ||
+        !currentRoomData.player2
+    ) {
+
+        return;
+
+    }
+
+
+    const roomRef =
+        ref(
+            db,
+            "rooms/" + room
+        );
+
+
+    await update(
+        roomRef,
+        {
+
+            status:
+                "selecting",
+
+            turn:
+                1,
+
+            guess:
+                null,
+
+            revealed:
+                null
+
+        }
+    );
+
+    guessMode = false;
+    eliminatedCards.clear();
+    mySecret = null;
+    lastGameTurn = null;
+        gameScreenWasShown = false;
+    renderedBoardSignature = "";
+
+};
+
+
+/* =========================================
+   SECRET SCREEN
+========================================= */
+
+function showSecretScreen() {
+
+    showOnly(
+        "secret"
+    );
+
+
+    const grid =
+        document
+            .getElementById(
+                "secretGrid"
+            );
+
+
+    grid.innerHTML = "";
+
+
+    board =
+        currentRoomData.board;
+
+
+    selectedSecret = null;
+    mySecret = null;
+
+
+    document
+        .getElementById(
+            "confirmSecret"
+        )
+        .disabled =
+        true;
+
+
+    board.forEach(
+        (character, index) => {
+
+            const card =
+                document.createElement(
+                    "div"
+                );
+
+
+            card.className =
+                "secret-card";
+
+
+            const img =
+                document.createElement(
+                    "img"
+                );
+
+
+            img.src =
+                character.image;
+
+
+            card.appendChild(
+                img
+            );
+
+
+            card.onclick =
+                function() {
+
+                    document
+                        .querySelectorAll(
+                            ".secret-card"
+                        )
+                        .forEach(
+                            c =>
+                                c.classList
+                                .remove(
+                                    "selected"
+                                )
+                        );
+
+
+                    card.classList.add(
+                        "selected"
+                    );
+
+
+                    selectedSecret =
+                        index;
+
+
+                    document
+                        .getElementById(
+                            "confirmSecret"
+                        )
+                        .disabled =
+                        false;
+
+                };
+
+
+            grid.appendChild(
+                card
+            );
+
+        }
+    );
+
+}
+
+
+/* =========================================
+   CONFIRM SECRET
+========================================= */
+
+window.confirmSecret =
+async function() {
+
+    if (
+        selectedSecret === null
+    ) {
+
+        return;
+
+    }
+
+
+    const secret =
+        board[
+            selectedSecret
+        ];
+
+    mySecret = secret;
+
+
+    const privateRef =
+        ref(
+            db,
+            "rooms/"
+            + room
+            + "/private/"
+            + user.uid
+        );
+
+
+    await set(
+        privateRef,
+        {
+
+            secret:
+                secret
+
+        }
+    );
+
+
+    /*
+       Mark this player ready.
+    */
+
+    const playerPath =
+        myPlayer === 1
+            ? "player1/ready"
+            : "player2/ready";
+
+
+    await set(
+        ref(
+            db,
+            "rooms/"
+            + room
+            + "/"
+            + playerPath
+        ),
+        true
+    );
+
+
+    waitForBothPlayers();
+
+};
+
+
+/* =========================================
+   WAIT FOR BOTH SECRET PICKS
+========================================= */
+
+function waitForBothPlayers() {
+
+    const secretGrid =
+        document.getElementById(
+            "secretGrid"
+        );
+
+    secretGrid.innerHTML = "";
+
+
+    document
+        .getElementById(
+            "confirmSecret"
+        )
+        .classList
+        .add("hidden");
+
+
+    const message =
+        document.createElement("p");
+
+
+    message.id =
+        "waitingMessage";
+
+
+    message.style.textAlign =
+        "center";
+
+
+    message.style.color =
+        "#888";
+
+
+    message.textContent =
+        "Waiting for both players to choose...";
+
+
+    secretGrid.appendChild(
+        message
+    );
+
+
+    const roomRef =
+        ref(
+            db,
+            "rooms/" + room
+        );
+
+
+    /*
+       IMPORTANT:
+
+       onValue keeps listening to Firebase.
+
+       So when the other player finally
+       chooses their character, this runs
+       automatically.
+    */
+
+    onValue(
+        roomRef,
+        snapshot => {
+
+            if (
+                !snapshot.exists()
+            ) {
+                return;
+            }
+
+
+            const data =
+                snapshot.val();
+
+
+            const player1Ready =
+                data.player1
+                &&
+                data.player1.ready === true;
+
+
+            const player2Ready =
+                data.player2
+                &&
+                data.player2.ready === true;
+
+
+            /*
+               Both players have selected
+               their characters.
+            */
+
+            if (
+                player1Ready
+                &&
+                player2Ready
+            ) {
+
+                /*
+                   Only Player 1 starts the
+                   actual game.
+
+                   Player 2 will receive the
+                   "playing" status through
+                   the normal room listener.
+                */
+
+                if (
+                    myPlayer === 1
+                ) {
+
+                    beginPlaying();
+
+                }
+
+            }
+
+        }
+    );
+
+}
+
+/* =========================================
+   BEGIN PLAYING
+========================================= */
+
+let gameScreenWasShown = false;
+let renderedBoardSignature = "";
+let lastGameTurn = null;
+let resultShown = false;
+
+async function beginPlaying() {
+    if (!currentRoomData || myPlayer !== 1 || currentRoomData.status === "playing") return;
+    await update(ref(db, "rooms/" + room), { status: "playing", turn: 1, guess: null });
+}
+
+/* =========================================
+   GAME SCREEN
+========================================= */
+function showGameScreen(data) {
+    const gameElement = document.getElementById("game");
+    const wasVisible = !gameElement.classList.contains("hidden");
+    showOnly("game");
+    const newBoard = Array.isArray(data.board) ? data.board : [];
+    const signature = newBoard.map(c => c.id).join("|");
+    if (!wasVisible || !gameScreenWasShown || signature !== renderedBoardSignature) {
+        board = newBoard;
+        renderBoard();
+        renderedBoardSignature = signature;
+    } else {
+        board = newBoard;
+    }
+    gameScreenWasShown = true;
+    updateGameHeader(data);
+}
+
+/* =========================================
+   RENDER BOARD
+========================================= */
+
+function renderBoard() {
+    const element = document.getElementById("board");
+    element.innerHTML = "";
+    element.className = "board size" + boardSize;
+
+    board.forEach((character, index) => {
+        const card = document.createElement("div");
+        card.className = "card";
+        card.dataset.index = index;
+
+        if (eliminatedCards.has(String(character.id))) {
+            card.classList.add("eliminated");
+        }
+
+        const img = document.createElement("img");
+        img.src = character.image;
+        img.alt = "";
+        img.draggable = false;
+        card.appendChild(img);
+
+        card.onclick = function () {
+            if (guessMode) {
+                makeGuess(index);
+                return;
+            }
+
+            if (!currentRoomData || Number(currentRoomData.turn) !== Number(myPlayer)) {
+                return;
+            }
+
+            const id = String(character.id);
+            if (eliminatedCards.has(id)) {
+                eliminatedCards.delete(id);
+                card.classList.remove("eliminated");
+            } else {
+                eliminatedCards.add(id);
+                card.classList.add("eliminated");
+            }
+        };
+
+        element.appendChild(card);
+    });
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+function updateGameHeader(data) {
+    const turnPlayer = Number(data.turn);
+    const name = turnPlayer === 1 ? data.player1.name : data.player2.name;
+    document.getElementById("turnText").textContent = name + "'s Turn";
+    const guessButton = document.getElementById("guessButton");
+    const endButton = document.getElementById("endTurnButton");
+    const status = document.getElementById("gameStatus");
+    const mine = turnPlayer === Number(myPlayer);
+    guessButton.disabled = !mine;
+    endButton.disabled = !mine;
+    if (!mine) {
+        guessMode = false;
+        document.getElementById("board").classList.remove("guess-mode");
+        guessButton.textContent = "🎯 GUESS";
+        status.textContent = "Opponent's turn.";
+    } else if (!guessMode) {
+        status.textContent = "Your turn — ask your question.";
+    }
+}
+
+/* =========================================
+   END TURN — NO TIMER
+========================================= */
+window.endTurn = async function() {
+    if (!currentRoomData || currentRoomData.status !== "playing") return;
+    if (Number(currentRoomData.turn) !== Number(myPlayer)) return;
+    guessMode = false;
+    document.getElementById("board").classList.remove("guess-mode");
+    document.getElementById("guessButton").textContent = "🎯 GUESS";
+    const next = Number(currentRoomData.turn) === 1 ? 2 : 1;
+    await update(ref(db, "rooms/" + room), { turn: next, guess: null });
+};
+
+/* =========================================
+   GUESS MODE
+========================================= */
+
+window.toggleGuess = function () {
+    if (!currentRoomData || currentRoomData.status !== "playing") return;
+    if (Number(currentRoomData.turn) !== Number(myPlayer)) return;
+
+    guessMode = !guessMode;
+
+    const boardElement = document.getElementById("board");
+    const guessButton = document.getElementById("guessButton");
+    const status = document.getElementById("gameStatus");
+
+    if (guessMode) {
+        boardElement.classList.add("guess-mode");
+        guessButton.textContent = "✖ CANCEL GUESS";
+        status.textContent = "Click the character you think your opponent chose.";
+    } else {
+        boardElement.classList.remove("guess-mode");
+        guessButton.textContent = "🎯 GUESS";
+        status.textContent = "Your turn — ask your question.";
+    }
+};
+
+/* =========================================
+   MAKE GUESS
+========================================= */
+
+async function makeGuess(index) {
+    if (!guessMode || !currentRoomData || currentRoomData.status !== "playing") return;
+    if (Number(currentRoomData.turn) !== Number(myPlayer)) return;
+
+    const character = board[index];
+    if (!character) return;
+
+    guessMode = false;
+    document.getElementById("board").classList.remove("guess-mode");
+    document.getElementById("guessButton").disabled = true;
+    document.getElementById("endTurnButton").disabled = true;
+    document.getElementById("guessButton").textContent = "🎯 GUESS";
+    document.getElementById("gameStatus").textContent = "Checking your guess...";
+
+    try {
+        await set(ref(db, "rooms/" + room + "/guess"), {
+            player: Number(myPlayer),
+            characterId: character.id,
+            timestamp: Date.now()
+        });
+
+        document.getElementById("gameStatus").textContent = "Waiting for result...";
+    } catch (e) {
+        console.error("Guess submission failed:", e);
+        document.getElementById("gameStatus").textContent =
+            "Could not submit guess: " + (e.message || "Firebase error");
+        document.getElementById("guessButton").disabled = false;
+        document.getElementById("endTurnButton").disabled = false;
+    }
+}
+
+/* =========================================
+   FINISH
+========================================= */
+
+async function finishGame(winner, correct) {
+        await update(ref(db, "rooms/" + room), {
+        status: "finished",
+        winner: Number(winner),
+        result: correct ? "correct" : "wrong",
+        finishedAt: Date.now()
+    });
+}
+
+/* =========================================
+   RESULTS
+========================================= */
+
+async function showResultScreen(data) {
+    guessMode = false;
+    gameScreenWasShown = false;
+    renderedBoardSignature = "";
+    
+    showOnly("result");
+
+    document.getElementById("winnerText").textContent =
+        "🏆 " + (Number(data.winner) === 1 ? data.player1.name : data.player2.name) + " WINS!";
+
+    document.getElementById("resultMessage").textContent =
+        data.result === "correct"
+            ? "Correct guess!"
+            : "Wrong guess! The opponent wins.";
+
+    document.getElementById("resultName1").textContent = data.player1.name;
+    document.getElementById("resultName2").textContent = data.player2.name;
+
+    // Each player reveals their own secret only after the match ends.
+    // This avoids reading the opponent's private secret during gameplay.
+    try {
+        const mySecretSnapshot = await get(
+            ref(db, "rooms/" + room + "/private/" + user.uid + "/secret")
+        );
+
+        if (mySecretSnapshot.exists()) {
+            await set(
+                ref(db, "rooms/" + room + "/revealed/player" + myPlayer),
+                mySecretSnapshot.val()
+            );
+        }
+    } catch (error) {
+        console.error("Could not reveal your character:", error);
+    }
+
+    // Read whatever has been revealed so far. Firebase will notify both
+    // browsers again when the other player reveals theirs.
+    const revealedRef = ref(db, "rooms/" + room + "/revealed");
+    onValue(revealedRef, snapshot => {
+        const revealed = snapshot.val() || {};
+
+        if (revealed.player1) {
+            document.getElementById("resultImage1").src = revealed.player1.image;
+        }
+
+        if (revealed.player2) {
+            document.getElementById("resultImage2").src = revealed.player2.image;
+        }
+    }, { onlyOnce: false });
+
+    document.getElementById("statName1").textContent = data.player1.name;
+    document.getElementById("statName2").textContent = data.player2.name;
+    document.getElementById("wins1").textContent = Number(data.winner) === 1 ? "1" : "0";
+    document.getElementById("wins2").textContent = Number(data.winner) === 2 ? "1" : "0";
+}
+
+/* =========================================
+   REMATCH
+========================================= */
+
+window.rematch =
+async function() {
+
+    if (
+        myPlayer !== 1
+    ) {
+
+        alert(
+            "The room creator starts the rematch."
+        );
+
+        return;
+
+    }
+
+
+    await update(
+        ref(
+            db,
+            "rooms/" + room
+        ),
+        {
+
+            status:
+                "selecting",
+
+            winner:
+                null,
+
+            result:
+                null,
+
+            "player1/ready":
+                false,
+
+            "player2/ready":
+                false,
+
+            turn:
+                1
+
+        }
+    );
+
+};
+
+
+/* =========================================
+   COPY ROOM
+========================================= */
+
+window.copyRoomCode =
+function() {
+
+    navigator.clipboard.writeText(
+        room
+    );
+
+
+    alert(
+        "Room code copied!"
+    );
+
+};
+
+
+/* =========================================
+   JOIN UI
+========================================= */
+
+window.showJoin =
+function() {
+
+    document
+        .getElementById(
+            "joinArea"
+        )
+        .classList
+        .remove(
+            "hidden"
+        );
+
+};
+
+</script>
+
+</body>
+
+</html>
+
     margin: 0;
     background: #0b0b0e;
     color: white;
