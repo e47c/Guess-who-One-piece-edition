@@ -911,6 +911,10 @@ let board = [];
 
 let selectedSecret = null;
 
+// Keep the player's secret in memory so the opponent's guess can be
+// verified without trying to read the opponent's private Firebase data.
+let mySecretCharacter = null;
+
 let guessMode = false;
 
 
@@ -1412,222 +1416,108 @@ function openLobby() {
 
 function listenToRoom() {
 
-    const roomRef =
-        ref(
-            db,
-            "rooms/" + room
-        );
-let lastProcessedGuess = null;
+    const roomRef = ref(db, "rooms/" + room);
+    const guessRef = ref(db, "rooms/" + room + "/guess");
 
-    onValue(
-        roomRef,
-        snapshot => {
+    // Main room listener: only reacts to actual room state.
+    onValue(roomRef, snapshot => {
 
-            if (
-                !snapshot.exists()
-            ) {
-
-                alert(
-                    "The room no longer exists."
-                );
-
-                location.reload();
-
-                return;
-
-            }
-
-
-            currentRoomData =
-                snapshot.val();
-
-
-            updateLobby(
-                currentRoomData
-            );
-
-
-            if (
-                currentRoomData.status
-                === "selecting"
-            ) {
-
-                if (
-                    !document
-                        .getElementById(
-                            "secret"
-                        )
-                        .classList
-                        .contains(
-                            "hidden"
-                        )
-                ) {
-
-                    return;
-
-                }
-
-
-                showSecretScreen();
-
-            }
-
-
-            if (
-                currentRoomData.status
-                === "playing"
-            ) {
-
-                showGameScreen(
-                    currentRoomData
-                );
-
-            }
-
-
-            if (
-                currentRoomData.status
-                === "finished"
-            ) {
-
-                showResultScreen(
-                    currentRoomData
-                );
-
-            }
-
+        if (!snapshot.exists()) {
+            alert("The room no longer exists.");
+            location.reload();
+            return;
         }
-    );
 
-          /*
-        Listen for guesses.
+        currentRoomData = snapshot.val();
 
-        When the opponent makes a guess,
-        this player's browser checks its
-        own secret character.
-    */
+        updateLobby(currentRoomData);
 
-    const guessRef =
-        ref(
-            db,
-            "rooms/" +
-            room +
-            "/guess"
-        );
+        if (currentRoomData.status === "selecting") {
+            const secretScreen = document.getElementById("secret");
+            if (secretScreen.classList.contains("hidden")) {
+                showSecretScreen();
+            }
+            return;
+        }
 
+        if (currentRoomData.status === "playing") {
+            showGameScreen(currentRoomData);
+            return;
+        }
 
-    onValue(
-        guessRef,
-        async snapshot => {
+        if (currentRoomData.status === "finished") {
+            showResultScreen(currentRoomData);
+        }
+    });
 
-            if (!snapshot.exists()) {
+    // Guess listener. The player who owns the secret verifies the guess
+    // using the secret already held in their browser.
+    onValue(guessRef, async snapshot => {
+
+        if (!snapshot.exists() || !currentRoomData) return;
+
+        const guess = snapshot.val();
+
+        // Someone has submitted a guess.
+        if (guess.status === "pending") {
+
+            if (guess.player === myPlayer) {
+                // This is our own guess. Do nothing except show the waiting state.
+                document.getElementById("gameStatus").textContent =
+                    "Checking your guess...";
                 return;
             }
 
-            if (!currentRoomData || currentRoomData.status !== "playing") {
+            // We are the player whose character is being guessed.
+            if (!mySecretCharacter) {
+                console.error("Cannot verify guess: secret character is not in memory.");
                 return;
             }
-
-            const guess =
-                snapshot.val();
-if (
-    lastProcessedGuess === guess.timestamp
-) {
-    return;
-}
-
-lastProcessedGuess =
-    guess.timestamp;
-
-            /*
-                Ignore our own guesses.
-            */
-
-            if (
-                guess.player === myPlayer
-            ) {
-                return;
-            }
-
-
-            /*
-                Get OUR private secret.
-            */
-
-            const secretRef =
-                ref(
-                    db,
-                    "rooms/" +
-                    room +
-                    "/private/" +
-                    user.uid +
-                    "/secret"
-                );
-
-
-            const secretSnapshot =
-                await get(secretRef);
-
-
-            if (
-                !secretSnapshot.exists()
-            ) {
-                return;
-            }
-
-
-            const mySecret =
-                secretSnapshot.val();
-
 
             const correct =
-                mySecret.id ===
-                guess.characterId;
+                mySecretCharacter.id === guess.characterId;
 
+            const winner = correct ? guess.player : myPlayer;
 
-            /*
-                The player who made the guess
-                wins if correct.
+            // Only write the result if the guess is still pending.
+            // A second update caused by Firebase will simply see a result.
+            try {
+                await update(guessRef, {
+                    status: correct ? "correct" : "wrong",
+                    winner: winner,
+                    checkedAt: Date.now()
+                });
+            } catch (error) {
+                console.error("Could not submit guess result:", error);
+                document.getElementById("gameStatus").textContent =
+                    "Could not verify the guess. Check Firebase rules.";
+            }
 
-                Otherwise WE win.
-            */
-
-            const winner =
-                correct
-                    ? guess.player
-                    : myPlayer;
-
-
-            await update(
-                ref(
-                    db,
-                    "rooms/" + room
-                ),
-                {
-
-                    status:
-                        "finished",
-
-                    winner:
-                        winner,
-
-                    result:
-                        correct
-                            ? "correct"
-                            : "wrong",
-
-                    guessedCharacter:
-                        guess.characterId,
-
-                    finishedAt:
-                        Date.now()
-
-                }
-            );
-
+            return;
         }
-    );
 
+        // The opponent has verified our guess (or we verified theirs).
+        if (guess.status === "correct" || guess.status === "wrong") {
+
+            const winner = guess.winner;
+            const correct = guess.status === "correct";
+
+            // Finish the room only once.
+            if (currentRoomData.status === "playing") {
+                try {
+                    await update(roomRef, {
+                        status: "finished",
+                        winner: winner,
+                        result: correct ? "correct" : "wrong",
+                        guessedCharacter: guess.characterId,
+                        finishedAt: Date.now()
+                    });
+                } catch (error) {
+                    console.error("Could not finish game:", error);
+                }
+            }
+        }
+    });
 }
 
 
@@ -1777,6 +1667,7 @@ function showSecretScreen() {
     selectedSecret =
         null;
 
+    mySecretCharacter = null;
 
     document
         .getElementById(
@@ -1880,6 +1771,8 @@ async function() {
             selectedSecret
         ];
 
+    // Keep a local copy for guess verification.
+    mySecretCharacter = secret;
 
     const privateRef =
         ref(
@@ -2228,19 +2121,29 @@ window.endTurn = async function() {
         return;
     }
 
+    const nextPlayer = myPlayer === 1 ? 2 : 1;
+    const button = document.getElementById("endTurnButton");
+    const guessButton = document.getElementById("guessButton");
+    const status = document.getElementById("gameStatus");
+
     guessMode = false;
     document.getElementById("board").classList.remove("guess-mode");
-    document.getElementById("guessButton").textContent = "🎯 GUESS";
+    guessButton.textContent = "🎯 GUESS";
+    button.disabled = true;
+    guessButton.disabled = true;
+    status.textContent = "Ending your turn...";
 
-    const nextPlayer = myPlayer === 1 ? 2 : 1;
-
-    await update(
-        ref(db, "rooms/" + room),
-        {
+    try {
+        await update(ref(db, "rooms/" + room), {
             turn: nextPlayer,
             guess: null
-        }
-    );
+        });
+    } catch (error) {
+        console.error("END TURN failed:", error);
+        button.disabled = false;
+        guessButton.disabled = false;
+        status.textContent = "Could not end the turn. Check Firebase rules.";
+    }
 };
 
 
@@ -2291,25 +2194,32 @@ async function makeGuess(index) {
     }
 
     const character = board[index];
-    if (!character) {
-        return;
-    }
+    if (!character) return;
+
+    const guessButton = document.getElementById("guessButton");
+    const endTurnButton = document.getElementById("endTurnButton");
+    const status = document.getElementById("gameStatus");
 
     guessMode = false;
     document.getElementById("board").classList.remove("guess-mode");
-    document.getElementById("guessButton").textContent = "🎯 GUESS";
-    document.getElementById("guessButton").disabled = true;
-    document.getElementById("endTurnButton").disabled = true;
-    document.getElementById("gameStatus").textContent = "Checking your guess...";
+    guessButton.textContent = "🎯 GUESS";
+    guessButton.disabled = true;
+    endTurnButton.disabled = true;
+    status.textContent = "Checking your guess...";
 
-    const guessRef = ref(db, "rooms/" + room + "/guess");
-
-    await set(guessRef, {
-        player: myPlayer,
-        characterId: character.id,
-        status: "pending",
-        timestamp: Date.now()
-    });
+    try {
+        await set(ref(db, "rooms/" + room + "/guess"), {
+            player: myPlayer,
+            characterId: character.id,
+            status: "pending",
+            timestamp: Date.now()
+        });
+    } catch (error) {
+        console.error("Guess submission failed:", error);
+        guessButton.disabled = false;
+        endTurnButton.disabled = false;
+        status.textContent = "Could not submit the guess. Check Firebase rules.";
+    }
 }
 
 
