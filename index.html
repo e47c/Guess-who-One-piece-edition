@@ -1817,11 +1817,12 @@ async function() {
 
 function waitForBothPlayers() {
 
-    document
-        .getElementById(
+    const secretGrid =
+        document.getElementById(
             "secretGrid"
-        )
-        .innerHTML = "";
+        );
+
+    secretGrid.innerHTML = "";
 
 
     document
@@ -1829,15 +1830,15 @@ function waitForBothPlayers() {
             "confirmSecret"
         )
         .classList
-        .add(
-            "hidden"
-        );
+        .add("hidden");
 
 
     const message =
-        document.createElement(
-            "p"
-        );
+        document.createElement("p");
+
+
+    message.id =
+        "waitingMessage";
 
 
     message.style.textAlign =
@@ -1852,13 +1853,9 @@ function waitForBothPlayers() {
         "Waiting for both players to choose...";
 
 
-    document
-        .getElementById(
-            "secret"
-        )
-        .appendChild(
-            message
-        );
+    secretGrid.appendChild(
+        message
+    );
 
 
     const roomRef =
@@ -1868,24 +1865,62 @@ function waitForBothPlayers() {
         );
 
 
-    get(
-        roomRef
-    ).then(
+    /*
+       IMPORTANT:
+
+       onValue keeps listening to Firebase.
+
+       So when the other player finally
+       chooses their character, this runs
+       automatically.
+    */
+
+    onValue(
+        roomRef,
         snapshot => {
+
+            if (
+                !snapshot.exists()
+            ) {
+                return;
+            }
+
 
             const data =
                 snapshot.val();
 
 
-            if (
+            const player1Ready =
                 data.player1
                 &&
+                data.player1.ready === true;
+
+
+            const player2Ready =
                 data.player2
                 &&
-                data.player1.ready
+                data.player2.ready === true;
+
+
+            /*
+               Both players have selected
+               their characters.
+            */
+
+            if (
+                player1Ready
                 &&
-                data.player2.ready
+                player2Ready
             ) {
+
+                /*
+                   Only Player 1 starts the
+                   actual game.
+
+                   Player 2 will receive the
+                   "playing" status through
+                   the normal room listener.
+                */
 
                 if (
                     myPlayer === 1
@@ -1901,7 +1936,6 @@ function waitForBothPlayers() {
     );
 
 }
-
 
 /* =========================================
    BEGIN PLAYING
