@@ -1456,17 +1456,18 @@ function listenToRoom() {
         if (!currentRoomData || currentRoomData.status !== "playing") return;
 
         try {
-            const opponent =
-                Number(myPlayer) === 1
-                    ? currentRoomData.player2
-                    : currentRoomData.player1;
+            const secretSnapshot = await get(
+                ref(db, "rooms/" + room + "/private/" + user.uid + "/secret")
+            );
 
-            if (!opponent || !opponent.secretId) {
-                throw new Error("The opponent's secret character is not ready.");
+            if (!secretSnapshot.exists()) {
+                throw new Error("Your secret character could not be found.");
             }
 
+            const mySecret = secretSnapshot.val();
+
             const correct =
-                String(opponent.secretId) === String(guess.characterId);
+                String(mySecret.id) === String(guess.characterId);
 
             const winner =
                 correct
