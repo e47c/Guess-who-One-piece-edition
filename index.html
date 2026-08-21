@@ -656,7 +656,6 @@ Loading...
 </div>
 
 
-<button id="guessButton" onclick="toggleGuess()">🎯 GUESS</button>
 <button id="endTurnButton" onclick="endTurn()">END TURN</button>
 
 
@@ -902,7 +901,6 @@ let board = [];
 
 let selectedSecret = null;
 
-let guessMode = false;
 
 
 let currentRoomData = null;
@@ -1435,65 +1433,7 @@ function listenToRoom() {
         }
     });
 
-    // Guess listener: the opponent validates the guess using their own secret.
-    // The validation is deliberately done by the player whose secret is being guessed.
-    const guessRef = ref(db, "rooms/" + room + "/guess");
-    let lastProcessedGuess = null;
 
-    onValue(guessRef, async snapshot => {
-        if (!snapshot.exists()) return;
-
-        const guess = snapshot.val();
-        const key = String(guess.timestamp || "");
-
-        if (!key || key === lastProcessedGuess) return;
-        lastProcessedGuess = key;
-
-        // The player who made the guess does not know the opponent's secret.
-        // Only the opponent validates it.
-        if (Number(guess.player) === Number(myPlayer)) return;
-
-        if (!currentRoomData || currentRoomData.status !== "playing") return;
-
-        try {
-            const secretSnap = await get(
-                ref(db, "rooms/" + room + "/private/" + user.uid + "/secret")
-            );
-
-            if (!secretSnap.exists()) {
-                throw new Error("Your secret character could not be found.");
-            }
-
-            const secret = secretSnap.val();
-            const correct =
-                String(secret.id) === String(guess.characterId);
-
-            const winner = correct
-                ? Number(guess.player)
-                : Number(myPlayer);
-
-            // This single update ends the game for BOTH players.
-            await update(
-                ref(db, "rooms/" + room),
-                {
-                    status: "finished",
-                    winner: winner,
-                    result: correct ? "correct" : "wrong",
-                    guessedCharacter: guess.characterId,
-                    finishedAt: Date.now(),
-                    guess: null
-                }
-            );
-
-        } catch (e) {
-            console.error("Guess validation failed:", e);
-
-            document.getElementById("gameStatus").textContent =
-                "Guess failed: " + (e.message || "Firebase error");
-        }
-    });
-
-}
 
 /* =========================================
    UPDATE LOBBY
@@ -1604,16 +1544,12 @@ async function() {
             turn:
                 1,
 
-            guess:
-                null,
-
             revealed:
                 null
 
         }
     );
 
-    guessMode = false;
     lastGameTurn = null;
         gameScreenWasShown = false;
     renderedBoardSignature = "";
@@ -1982,11 +1918,6 @@ function renderBoard() {
         card.appendChild(img);
 
         card.onclick = function () {
-            if (guessMode) {
-                makeGuess(index);
-                return;
-            }
-
             // Normal Guess Who elimination.
             if (!currentRoomData || Number(currentRoomData.turn) !== Number(myPlayer)) {
                 return;
@@ -2007,20 +1938,13 @@ function updateGameHeader(data) {
     const turnPlayer = Number(data.turn);
     const name = turnPlayer === 1 ? data.player1.name : data.player2.name;
     document.getElementById("turnText").textContent = name + "'s Turn";
-    const guessButton = document.getElementById("guessButton");
     const endButton = document.getElementById("endTurnButton");
     const status = document.getElementById("gameStatus");
     const mine = turnPlayer === Number(myPlayer);
-    guessButton.disabled = !mine;
     endButton.disabled = !mine;
-    if (!mine) {
-        guessMode = false;
-        document.getElementById("board").classList.remove("guess-mode");
-        guessButton.textContent = "🎯 GUESS";
-        status.textContent = "Opponent's turn.";
-    } else if (!guessMode) {
-        status.textContent = "Your turn — ask your question.";
-    }
+    status.textContent = mine
+        ? "Your turn — ask your question."
+        : "Opponent's turn.";
 }
 
 /* =========================================
@@ -2032,9 +1956,6 @@ window.endTurn = async function() {
 
     const next = Number(myPlayer) === 1 ? 2 : 1;
 
-    guessMode = false;
-    document.getElementById("board").classList.remove("guess-mode");
-    document.getElementById("guessButton").textContent = "🎯 GUESS";
     document.getElementById("endTurnButton").disabled = true;
     document.getElementById("gameStatus").textContent = "Ending turn...";
 
@@ -2042,8 +1963,7 @@ window.endTurn = async function() {
         await update(
             ref(db, "rooms/" + room),
             {
-                turn: next,
-                guess: null
+                turn: next
             }
         );
 
@@ -2063,75 +1983,6 @@ window.endTurn = async function() {
 };
 
 /* =========================================
-   GUESS MODE
-========================================= */
-
-window.toggleGuess = function () {
-    if (!currentRoomData || currentRoomData.status !== "playing") return;
-    if (Number(currentRoomData.turn) !== Number(myPlayer)) return;
-
-    guessMode = !guessMode;
-
-    const boardElement = document.getElementById("board");
-    const guessButton = document.getElementById("guessButton");
-    const status = document.getElementById("gameStatus");
-
-    if (guessMode) {
-        boardElement.classList.add("guess-mode");
-        guessButton.textContent = "✖ CANCEL GUESS";
-        status.textContent = "Click the character you think your opponent chose.";
-    } else {
-        boardElement.classList.remove("guess-mode");
-        guessButton.textContent = "🎯 GUESS";
-        status.textContent = "Your turn — ask your question.";
-    }
-};
-
-/* =========================================
-   MAKE GUESS
-========================================= */
-
-async function makeGuess(index) {
-    if (!guessMode || !currentRoomData || currentRoomData.status !== "playing") return;
-    if (Number(currentRoomData.turn) !== Number(myPlayer)) return;
-
-    const character = board[index];
-    if (!character) return;
-
-    guessMode = false;
-    document.getElementById("board").classList.remove("guess-mode");
-    document.getElementById("guessButton").disabled = true;
-    document.getElementById("endTurnButton").disabled = true;
-    document.getElementById("guessButton").textContent = "🎯 GUESS";
-    document.getElementById("gameStatus").textContent =
-        "Checking your guess...";
-
-    try {
-        await set(
-            ref(db, "rooms/" + room + "/guess"),
-            {
-                player: Number(myPlayer),
-                characterId: character.id,
-                timestamp: Date.now()
-            }
-        );
-
-        // The opponent will validate the guess against their private
-        // character and change the room status to "finished".
-        document.getElementById("gameStatus").textContent =
-            "Waiting for the result...";
-
-    } catch (e) {
-        console.error("Guess submission failed:", e);
-
-        document.getElementById("gameStatus").textContent =
-            "Could not submit guess: " + (e.message || "Firebase error");
-
-        updateGameHeader(currentRoomData);
-    }
-}
-
-/* =========================================
    FINISH
 ========================================= */
 
@@ -2149,7 +2000,6 @@ async function finishGame(winner, correct) {
 ========================================= */
 
 async function showResultScreen(data) {
-    guessMode = false;
     gameScreenWasShown = false;
     renderedBoardSignature = "";
     
