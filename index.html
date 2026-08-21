@@ -1413,6 +1413,59 @@ function listenToRoom() {
         currentRoomData = snapshot.val();
         updateLobby(currentRoomData);
 
+        // IMPORTANT: a resolved guess lives under /guess, so the room
+        // listener also sees it. Handle it BEFORE the normal "playing"
+        // UI update, otherwise showGameScreen() immediately overwrites
+        // "Waiting for result..." with the normal turn message.
+        const roomGuess = currentRoomData.guess;
+        if (roomGuess && roomGuess.status === "resolved") {
+            guessPending = false;
+            currentGuessId = null;
+            guessMode = false;
+
+            const boardEl = document.getElementById("board");
+            if (boardEl) boardEl.classList.remove("guess-mode");
+
+            const guessBtn = document.getElementById("guessButton");
+            if (guessBtn) {
+                guessBtn.disabled = true;
+                guessBtn.textContent = "🎯 GUESS";
+            }
+
+            const endBtn = document.getElementById("endTurnButton");
+            if (endBtn) endBtn.disabled = true;
+
+            const statusEl = document.getElementById("gameStatus");
+            if (statusEl) {
+                statusEl.textContent =
+                    Number(roomGuess.winner) === Number(myPlayer)
+                        ? "🏆 You won! Correct guess!"
+                        : "❌ Wrong guess — your opponent wins.";
+            }
+
+            // The player who verified the guess is the only browser that
+            // finalizes the room, avoiding two competing writes.
+            if (roomGuess.resolvedBy === user.uid && currentRoomData.status !== "finished") {
+                try {
+                    await update(ref(db, "rooms/" + room), {
+                        status: "finished",
+                        winner: Number(roomGuess.winner),
+                        result: roomGuess.correct ? "correct" : "wrong",
+                        guessedCharacter: roomGuess.characterId,
+                        finishedAt: Date.now()
+                    });
+                } catch (e) {
+                    console.error("Could not finish game:", e);
+                    if (statusEl) {
+                        statusEl.textContent =
+                            "Could not finish game: " + (e.message || "Firebase error");
+                    }
+                }
+            }
+
+            return;
+        }
+
         if (currentRoomData.status === "selecting") {
             guessPending = false;
             currentGuessId = null;
@@ -1495,38 +1548,11 @@ function listenToRoom() {
             return;
         }
 
-        // A resolved guess: every browser finishes the room.
+        // Resolved guesses are handled by the main room listener above.
+        // Keeping resolution in one place prevents the room listener from
+        // immediately overwriting the result UI.
         if (guess.status === "resolved") {
-
-            if (Number(guess.player) === Number(myPlayer)) {
-                if (currentGuessId === guessId) {
-                    guessPending = false;
-                    currentGuessId = null;
-                }
-            }
-
-            // Stop another guess from being submitted while this resolves.
-            guessMode = false;
-            document.getElementById("board").classList.remove("guess-mode");
-            document.getElementById("guessButton").disabled = true;
-            document.getElementById("endTurnButton").disabled = true;
-            document.getElementById("guessButton").textContent = "🎯 GUESS";
-            document.getElementById("gameStatus").textContent =
-                guess.correct ? "Correct guess!" : "Wrong guess!";
-
-            try {
-                await update(ref(db, "rooms/" + room), {
-                    status: "finished",
-                    winner: Number(guess.winner),
-                    result: guess.correct ? "correct" : "wrong",
-                    guessedCharacter: guess.characterId,
-                    finishedAt: Date.now()
-                });
-            } catch (e) {
-                console.error("Could not finish game:", e);
-                document.getElementById("gameStatus").textContent =
-                    "Could not finish game: " + (e.message || "Firebase error");
-            }
+            return;
         }
     });
 
