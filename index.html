@@ -232,6 +232,45 @@ label {
     margin-top: 15px;
 }
 
+.anime-poll {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.anime-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(8,32,42,.55);
+    border: 1px solid rgba(217,164,65,.3);
+    border-radius: 9px;
+    padding: 11px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 0;
+    transition: border-color .12s ease, background .12s ease;
+}
+
+.anime-option:hover {
+    border-color: var(--gold);
+}
+
+.anime-option input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--luffy-red);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.anime-hint {
+    color: rgba(243,230,200,.5);
+    font-size: 12px;
+    margin: 8px 0 0;
+}
+
 
 /* ================================
    LOBBY
@@ -504,6 +543,10 @@ label {
         grid-template-columns: 1fr;
     }
 
+    .anime-poll {
+        grid-template-columns: 1fr;
+    }
+
     .game-header-inner {
         flex-wrap: wrap;
     }
@@ -542,6 +585,73 @@ Play online with a friend
     id="name"
     maxlength="20"
     placeholder="Enter your name">
+
+</div>
+
+
+<div class="field">
+
+<label>Game Mode</label>
+
+<div class="sizes">
+
+<button
+    id="modeOnePiece"
+    class="size mode-btn selected"
+    onclick="setMode('onepiece')">
+☠️ One Piece
+</button>
+
+<button
+    id="modeAnime"
+    class="size mode-btn"
+    onclick="setMode('anime')">
+🌀 Anime Mix
+</button>
+
+</div>
+
+</div>
+
+
+<div
+    id="animePoll"
+    class="field hidden">
+
+<label>Choose Anime Series</label>
+
+<div class="anime-poll">
+
+<label class="anime-option">
+<input type="checkbox" value="naruto">
+Naruto
+</label>
+
+<label class="anime-option">
+<input type="checkbox" value="dragonball">
+Dragon Ball
+</label>
+
+<label class="anime-option">
+<input type="checkbox" value="jjk">
+Jujutsu Kaisen
+</label>
+
+<label class="anime-option">
+<input type="checkbox" value="demonslayer">
+Demon Slayer
+</label>
+
+<label class="anime-option">
+<input type="checkbox" value="bleach">
+Bleach
+</label>
+
+</div>
+
+<p class="anime-hint">
+Characters will be pulled randomly from every series you check.
+</p>
 
 </div>
 
@@ -1026,6 +1136,9 @@ let myPlayer = null;
 
 let boardSize = 24;
 
+// "onepiece" or "anime" — chosen on the home screen before creating a room.
+let mode = "onepiece";
+
 let board = [];
 
 let selectedSecret = null;
@@ -1185,6 +1298,153 @@ const CHARACTER_LIBRARY = [
     "images/character96.jpg"
 ];
 
+/* =========================================
+   ANIME EDITION LIBRARY
+   ---------------------------------------
+   Each key is an anime series. Add more file
+   paths (or whole new series) here whenever
+   you have more character images ready.
+========================================= */
+
+const ANIME_LIBRARY = {
+
+    naruto: [
+        "images/anime/naruto/1.jpg",
+        "images/anime/naruto/2.jpg",
+        "images/anime/naruto/3.jpg",
+        "images/anime/naruto/4.jpg",
+        "images/anime/naruto/5.jpg",
+        "images/anime/naruto/6.jpg",
+        "images/anime/naruto/7.jpg",
+        "images/anime/naruto/8.jpg",
+        "images/anime/naruto/9.jpg",
+        "images/anime/naruto/10.jpg",
+        "images/anime/naruto/11.jpg",
+        "images/anime/naruto/12.jpg",
+        "images/anime/naruto/13.jpg",
+        "images/anime/naruto/14.jpg",
+        "images/anime/naruto/15.jpg",
+        "images/anime/naruto/16.jpg",
+        "images/anime/naruto/17.jpg",
+        "images/anime/naruto/18.jpg",
+        "images/anime/naruto/19.jpg",
+        "images/anime/naruto/20.jpg",
+        "images/anime/naruto/21.jpg",
+        "images/anime/naruto/22.jpg",
+        "images/anime/naruto/23.jpg",
+        "images/anime/naruto/24.jpg"
+    ],
+
+    dragonball: [
+        "images/anime/dragonball/1.jpg",
+        "images/anime/dragonball/2.jpg",
+        "images/anime/dragonball/3.jpg",
+        "images/anime/dragonball/4.jpg",
+        "images/anime/dragonball/5.jpg",
+        "images/anime/dragonball/6.jpg",
+        "images/anime/dragonball/7.jpg",
+        "images/anime/dragonball/8.jpg",
+        "images/anime/dragonball/9.jpg",
+        "images/anime/dragonball/10.jpg",
+        "images/anime/dragonball/11.jpg",
+        "images/anime/dragonball/12.jpg",
+        "images/anime/dragonball/13.jpg",
+        "images/anime/dragonball/14.jpg",
+        "images/anime/dragonball/15.jpg",
+        "images/anime/dragonball/16.jpg",
+        "images/anime/dragonball/17.jpg",
+        "images/anime/dragonball/18.jpg",
+        "images/anime/dragonball/19.jpg",
+        "images/anime/dragonball/20.jpg",
+        "images/anime/dragonball/21.jpg",
+        "images/anime/dragonball/22.jpg",
+        "images/anime/dragonball/23.jpg",
+        "images/anime/dragonball/24.jpg"
+    ],
+
+    jjk: [
+        "images/anime/jjk/1.jpg",
+        "images/anime/jjk/2.jpg",
+        "images/anime/jjk/3.jpg",
+        "images/anime/jjk/4.jpg",
+        "images/anime/jjk/5.jpg",
+        "images/anime/jjk/6.jpg",
+        "images/anime/jjk/7.jpg",
+        "images/anime/jjk/8.jpg",
+        "images/anime/jjk/9.jpg",
+        "images/anime/jjk/10.jpg",
+        "images/anime/jjk/11.jpg",
+        "images/anime/jjk/12.jpg",
+        "images/anime/jjk/13.jpg",
+        "images/anime/jjk/14.jpg",
+        "images/anime/jjk/15.jpg",
+        "images/anime/jjk/16.jpg",
+        "images/anime/jjk/17.jpg",
+        "images/anime/jjk/18.jpg",
+        "images/anime/jjk/19.jpg",
+        "images/anime/jjk/20.jpg",
+        "images/anime/jjk/21.jpg",
+        "images/anime/jjk/22.jpg",
+        "images/anime/jjk/23.jpg",
+        "images/anime/jjk/24.jpg"
+    ],
+
+    demonslayer: [
+        "images/anime/demonslayer/1.jpg",
+        "images/anime/demonslayer/2.jpg",
+        "images/anime/demonslayer/3.jpg",
+        "images/anime/demonslayer/4.jpg",
+        "images/anime/demonslayer/5.jpg",
+        "images/anime/demonslayer/6.jpg",
+        "images/anime/demonslayer/7.jpg",
+        "images/anime/demonslayer/8.jpg",
+        "images/anime/demonslayer/9.jpg",
+        "images/anime/demonslayer/10.jpg",
+        "images/anime/demonslayer/11.jpg",
+        "images/anime/demonslayer/12.jpg",
+        "images/anime/demonslayer/13.jpg",
+        "images/anime/demonslayer/14.jpg",
+        "images/anime/demonslayer/15.jpg",
+        "images/anime/demonslayer/16.jpg",
+        "images/anime/demonslayer/17.jpg",
+        "images/anime/demonslayer/18.jpg",
+        "images/anime/demonslayer/19.jpg",
+        "images/anime/demonslayer/20.jpg",
+        "images/anime/demonslayer/21.jpg",
+        "images/anime/demonslayer/22.jpg",
+        "images/anime/demonslayer/23.jpg",
+        "images/anime/demonslayer/24.jpg"
+    ],
+
+    bleach: [
+        "images/anime/bleach/1.jpg",
+        "images/anime/bleach/2.jpg",
+        "images/anime/bleach/3.jpg",
+        "images/anime/bleach/4.jpg",
+        "images/anime/bleach/5.jpg",
+        "images/anime/bleach/6.jpg",
+        "images/anime/bleach/7.jpg",
+        "images/anime/bleach/8.jpg",
+        "images/anime/bleach/9.jpg",
+        "images/anime/bleach/10.jpg",
+        "images/anime/bleach/11.jpg",
+        "images/anime/bleach/12.jpg",
+        "images/anime/bleach/13.jpg",
+        "images/anime/bleach/14.jpg",
+        "images/anime/bleach/15.jpg",
+        "images/anime/bleach/16.jpg",
+        "images/anime/bleach/17.jpg",
+        "images/anime/bleach/18.jpg",
+        "images/anime/bleach/19.jpg",
+        "images/anime/bleach/20.jpg",
+        "images/anime/bleach/21.jpg",
+        "images/anime/bleach/22.jpg",
+        "images/anime/bleach/23.jpg",
+        "images/anime/bleach/24.jpg"
+    ]
+
+};
+
 
 /* =========================================
    HELPERS
@@ -1236,6 +1496,47 @@ function setSize(size) {
         )
         .classList.add(
             "selected"
+        );
+
+}
+
+
+window.setMode =
+function setMode(newMode) {
+
+    mode =
+        newMode;
+
+
+    document
+        .querySelectorAll(".mode-btn")
+        .forEach(
+            btn =>
+                btn.classList.remove(
+                    "selected"
+                )
+        );
+
+
+    document
+        .getElementById(
+            newMode === "anime"
+                ? "modeAnime"
+                : "modeOnePiece"
+        )
+        .classList.add(
+            "selected"
+        );
+
+
+    document
+        .getElementById(
+            "animePoll"
+        )
+        .classList
+        .toggle(
+            "hidden",
+            newMode !== "anime"
         );
 
 }
@@ -1328,15 +1629,59 @@ async function() {
     }
 
 
+    let sourcePool =
+        CHARACTER_LIBRARY;
+
+    let selectedAnimes =
+        [];
+
     if (
-        CHARACTER_LIBRARY.length
+        mode === "anime"
+    ) {
+
+        selectedAnimes =
+            Array.from(
+                document.querySelectorAll(
+                    "#animePoll input[type=checkbox]:checked"
+                )
+            ).map(
+                cb => cb.value
+            );
+
+        if (
+            selectedAnimes.length === 0
+        ) {
+
+            alert(
+                "Pick at least one anime for Anime Mix mode."
+            );
+
+            return;
+
+        }
+
+        sourcePool =
+            selectedAnimes.flatMap(
+                key => ANIME_LIBRARY[key] || []
+            );
+
+    }
+
+
+    if (
+        sourcePool.length
         < boardSize
     ) {
 
         alert(
             "You need at least "
             + boardSize
-            + " images in your library."
+            + " images in your library"
+            + (
+                mode === "anime"
+                    ? " across the anime you selected."
+                    : "."
+            )
         );
 
         return;
@@ -1354,7 +1699,7 @@ async function() {
 
     const selected =
         shuffle(
-            CHARACTER_LIBRARY
+            sourcePool
         ).slice(
             0,
             boardSize
@@ -1388,6 +1733,12 @@ async function() {
 
             boardSize:
                 boardSize,
+
+            mode:
+                mode,
+
+            animes:
+                selectedAnimes,
 
             player1: {
 
