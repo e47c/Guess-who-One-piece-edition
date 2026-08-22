@@ -987,30 +987,7 @@ const CHARACTER_LIBRARY = [
     "images/character26.jpg",
     "images/character27.jpg",
     "images/character28.jpg",
-    "images/character29.jpg",
-    "images/character30.jpg",
-    "images/character31.jpg",
-    "images/character32.jpg",
-    "images/character33.jpg",
-    "images/character34.jpg",
-    "images/character35.jpg",
-    "images/character36.jpg",
-    "images/character37.jpg",
-    "images/character38.jpg",
-    "images/character39.jpg",
-    "images/character40.jpg",
-    "images/character41.jpg",
-    "images/character42.jpg",
-    "images/character43.jpg",
-    "images/character44.jpg",
-    "images/character45.jpg",
-    "images/character46.jpg",
-    "images/character47.jpg",
-    "images/character48.jpg",
-    "images/character49.jpg",
-    "images/character50.jpg",
-    "images/character51.jpg",
-    "images/character52.jpg"
+    "images/character29.jpg"
 ];
 
 
@@ -1501,14 +1478,31 @@ function listenToRoom() {
                     ? Number(guess.player)
                     : Number(myPlayer);
 
-            await update(ref(db, "rooms/" + room), {
+            // Track cumulative wins across rounds in this room. Read from
+            // our own up-to-date currentRoomData so this is a plain
+            // increment, not a reset — rematch() never touches these.
+            const player1Wins =
+                (currentRoomData.player1 && Number(currentRoomData.player1.wins)) || 0;
+
+            const player2Wins =
+                (currentRoomData.player2 && Number(currentRoomData.player2.wins)) || 0;
+
+            const updates = {
                 status: "finished",
                 winner: winner,
                 result: correct ? "correct" : "wrong",
                 guessedCharacter: guess.characterId,
                 finishedAt: Date.now(),
                 guess: null
-            });
+            };
+
+            if (winner === 1) {
+                updates["player1/wins"] = player1Wins + 1;
+            } else {
+                updates["player2/wins"] = player2Wins + 1;
+            }
+
+            await update(ref(db, "rooms/" + room), updates);
 
         } catch (e) {
             console.error("Guess validation failed:", e);
@@ -1652,6 +1646,8 @@ async function() {
 ========================================= */
 
 function showSecretScreen() {
+
+    resultShown = false;
 
     showOnly(
         "secret"
@@ -2273,8 +2269,10 @@ async function showResultScreen(data) {
 
     document.getElementById("statName1").textContent = data.player1.name;
     document.getElementById("statName2").textContent = data.player2.name;
-    document.getElementById("wins1").textContent = Number(data.winner) === 1 ? "1" : "0";
-    document.getElementById("wins2").textContent = Number(data.winner) === 2 ? "1" : "0";
+    document.getElementById("wins1").textContent =
+        String((data.player1 && Number(data.player1.wins)) || 0);
+    document.getElementById("wins2").textContent =
+        String((data.player2 && Number(data.player2.wins)) || 0);
 }
 
 /* =========================================
@@ -2329,7 +2327,10 @@ async function() {
                 false,
 
             turn:
-                1
+                1,
+
+            revealed:
+                null
 
         }
     );
