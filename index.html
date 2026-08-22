@@ -40,10 +40,39 @@
     --gold: #d9a441;
     --gold-bright: #f0c168;
     --sakura: #f0a9bf;
+    --bg-image: url('images/bg-hero.jpg');
+    --bg-tint-1: rgba(8,32,42,.60);
+    --bg-tint-2: rgba(8,32,42,.72);
+    --bg-tint-3: rgba(6,20,26,.92);
+    --badge-symbol: "☠";
 
     --font-display: 'Pirata One', 'Georgia', serif;
     --font-body: 'Inter', -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
+}
+
+/* ================================
+   ANIME EDITION THEME
+   Swapped in on <body> via JS
+   whenever mode === "anime".
+================================ */
+
+body.anime-theme {
+    --ink: #0b0a14;
+    --parchment: #f1ecff;
+    --parchment-dim: #cfc2f2;
+    --ocean-deep: #1c1030;
+    --ocean-mid: #5b2a9e;
+    --luffy-red: #e63e6d;
+    --luffy-red-dim: #b12e54;
+    --gold: #ffce54;
+    --gold-bright: #ffe28a;
+    --sakura: #57e0d0;
+    --bg-image: url('images/bg-anime.jpg');
+    --bg-tint-1: rgba(20,10,35,.55);
+    --bg-tint-2: rgba(20,10,35,.72);
+    --bg-tint-3: rgba(10,6,20,.92);
+    --badge-symbol: "⚡";
 }
 
 * {
@@ -56,8 +85,9 @@ body {
     font-family: var(--font-body);
     color: var(--parchment);
     background:
-        linear-gradient(180deg, rgba(8,32,42,.60) 0%, rgba(8,32,42,.72) 45%, rgba(6,20,26,.92) 100%),
-        url('images/bg-hero.jpg') center 30% / cover no-repeat fixed;
+        linear-gradient(180deg, var(--bg-tint-1) 0%, var(--bg-tint-2) 45%, var(--bg-tint-3) 100%),
+        var(--bg-image) center 30% / cover no-repeat fixed;
+    transition: background-color .3s ease;
 }
 
 button {
@@ -147,7 +177,7 @@ button:focus-visible {
 }
 
 .panel::before {
-    content: "☠";
+    content: var(--badge-symbol);
     position: absolute;
     top: -22px;
     left: 50%;
@@ -570,7 +600,7 @@ label {
 
 <div class="panel">
 
-<h1>☠️ Guess Who: One Piece Edition</h1>
+<h1 id="homeTitle">☠️ Guess Who: One Piece Edition</h1>
 
 <div class="subtitle">
 Play online with a friend
@@ -1501,11 +1531,40 @@ function setSize(size) {
 }
 
 
+/*
+   Swaps the background image and color palette between
+   the One Piece and Anime Mix themes. Purely cosmetic —
+   never touches game state.
+*/
+function applyTheme(themeMode) {
+
+    document.body.classList.toggle(
+        "anime-theme",
+        themeMode === "anime"
+    );
+
+    const title =
+        document.getElementById("homeTitle");
+
+    if (title) {
+
+        title.textContent =
+            themeMode === "anime"
+                ? "⚡ Guess Who: Anime Edition"
+                : "☠️ Guess Who: One Piece Edition";
+
+    }
+
+}
+
+
 window.setMode =
 function setMode(newMode) {
 
     mode =
         newMode;
+
+    applyTheme(newMode);
 
 
     document
@@ -1961,6 +2020,12 @@ function listenToRoom() {
         }
 
         currentRoomData = snapshot.val();
+
+        // Keep the visual theme in sync with the room's actual mode
+        // (matters most for the joining player, whose local button
+        // clicks on the home screen shouldn't be the source of truth
+        // once a real room with real data exists).
+        applyTheme(currentRoomData.mode || "onepiece");
 
         // Keep the local board size synchronized with the room.
         if (currentRoomData.boardSize) {
